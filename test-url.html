@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Supabase URL 테스트</title>
+</head>
+<body>
+    <h1>Supabase 연결 테스트</h1>
+    <button onclick="testConnection()">연결 테스트</button>
+    <div id="result"></div>
+
+    <script>
+        async function testConnection() {
+            const url = 'https://bqsyujtveafhxwknpxik.supabase.co';
+            const anon_key = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJxc3l1anR2ZWFmaHh3a25weGlrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTEyMDI2OTMsImV4cCI6MjA2Njc3ODY5M30.Y38nmrl3V06L7_WasiTLRK8pT-N3Cvf_0h3hxuN9TyA';
+            
+            const resultDiv = document.getElementById('result');
+            
+            try {
+                // 기본 ping 테스트
+                resultDiv.innerHTML = '📡 기본 연결 테스트 중...';
+                
+                const response = await fetch(`${url}/rest/v1/`, {
+                    headers: {
+                        'apikey': anon_key,
+                        'Authorization': `Bearer ${anon_key}`
+                    }
+                });
+                
+                resultDiv.innerHTML += `<br>응답 상태: ${response.status}`;
+                
+                if (response.status === 200) {
+                    resultDiv.innerHTML += '<br>✅ 기본 연결 성공!';
+                    
+                    // 테이블 접근 테스트
+                    resultDiv.innerHTML += '<br>📊 테이블 접근 테스트 중...';
+                    
+                    const tableResponse = await fetch(`${url}/rest/v1/chat_rooms?select=*&limit=1`, {
+                        headers: {
+                            'apikey': anon_key,
+                            'Authorization': `Bearer ${anon_key}`
+                        }
+                    });
+                    
+                    resultDiv.innerHTML += `<br>테이블 응답 상태: ${tableResponse.status}`;
+                    
+                    if (tableResponse.status === 200) {
+                        const data = await tableResponse.json();
+                        resultDiv.innerHTML += '<br>✅ 테이블 접근 성공!';
+                        resultDiv.innerHTML += `<br>데이터: ${JSON.stringify(data)}`;
+                    } else {
+                        resultDiv.innerHTML += '<br>❌ 테이블 접근 실패';
+                        const errorText = await tableResponse.text();
+                        resultDiv.innerHTML += `<br>에러: ${errorText}`;
+                    }
+                } else {
+                    resultDiv.innerHTML += '<br>❌ 기본 연결 실패';
+                    const errorText = await response.text();
+                    resultDiv.innerHTML += `<br>에러: ${errorText}`;
+                }
+                
+            } catch (error) {
+                resultDiv.innerHTML += `<br>❌ 연결 오류: ${error.message}`;
+            }
+        }
+    </script>
+</body>
+</html> 
