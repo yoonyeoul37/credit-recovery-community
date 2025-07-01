@@ -52,8 +52,8 @@ const liveChats = [
   },
   {
     id: 3,
-    title: '💰 대출 정보 공유방',
-    description: '안전한 대출 정보와 주의사항을 실시간으로 나눠요',
+    title: '💰 신용카드발급 · 대출 정보 공유방',
+    description: '신용카드 발급과 안전한 대출 정보를 실시간으로 나눠요',
     participants: 31,
     status: 'active',
     category: '대출정보',
@@ -105,6 +105,9 @@ const chatGuidelines = [
 export default function LiveChatPage() {
   const [connectionStatus, setConnectionStatus] = useState<'testing' | 'success' | 'failed' | null>(null)
   const [errorMessage, setErrorMessage] = useState<string>('')
+  
+  // 현재 활성 채팅방 ID (1: 메인, 2: 개인회생, 3: 대출정보, 4: 성공사례)
+  const [activeRoomId, setActiveRoomId] = useState<number>(1)
 
   // 실시간 현황 상태
   const [liveStats, setLiveStats] = useState({
@@ -127,8 +130,8 @@ export default function LiveChatPage() {
       // 고유 사용자 수 계산
       const uniqueUsers = onlineData ? [...new Set(onlineData.map(msg => msg.user_hash))].length : 0
 
-      // 활성 채팅방 수 (현재는 1개 고정, 나중에 확장 가능)
-      const activeRooms = 1
+      // 활성 채팅방 수 (메인 + 개인회생 = 2개)
+      const activeRooms = 2
 
       // 오늘 메시지 수 (채팅 메시지)
       const today = new Date().toISOString().split('T')[0]
@@ -245,29 +248,60 @@ export default function LiveChatPage() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* 메인 컨텐츠 */}
           <div className="lg:col-span-2">
-            {/* 메인 실시간 채팅방 */}
+            {/* 현재 활성 채팅방 */}
             <section className="mb-8">
-              <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center">
-                <MessageCircle className="w-5 h-5 mr-2 text-green-500" />
-                💬 신용회복 종합상담방
-              </h2>
-              
-              {/* 채팅 환경 상태 */}
-              <EnvironmentStatus />
-              
-              {/* 실시간 채팅 컴포넌트 */}
-              <ChatRoom roomId={1} className="mb-6" />
+              {(() => {
+                const currentChat = liveChats.find(chat => chat.id === activeRoomId)
+                if (!currentChat) return null
+                
+                return (
+                  <>
+                    <div className="flex items-center justify-between mb-4">
+                      <h2 className="text-xl font-bold text-gray-900 flex items-center">
+                        <MessageCircle className="w-5 h-5 mr-2 text-green-500" />
+                        {currentChat.title}
+                      </h2>
+                      
+                      {/* 다른 채팅방이 있을 때만 뒤로 가기 버튼 표시 */}
+                      {activeRoomId !== 1 && (
+                        <button
+                          onClick={() => setActiveRoomId(1)}
+                          className="flex items-center text-gray-600 hover:text-indigo-600 transition-colors"
+                        >
+                          <ArrowLeft className="w-4 h-4 mr-1" />
+                          메인 채팅방으로
+                        </button>
+                      )}
+                    </div>
+                    
+                    {/* 채팅방 설명 */}
+                    <div className="bg-indigo-50 rounded-lg p-4 mb-4">
+                      <p className="text-indigo-800 text-sm">
+                        {currentChat.description}
+                      </p>
+                    </div>
+                    
+                    {/* 채팅 환경 상태 */}
+                    <EnvironmentStatus />
+                    
+                    {/* 실시간 채팅 컴포넌트 */}
+                    <ChatRoom roomId={activeRoomId} className="mb-6" />
+                  </>
+                )
+              })()}
             </section>
 
             {/* 다른 채팅방 목록 */}
             <section className="mb-8">
               <h3 className="text-lg font-semibold text-gray-900 mb-4">🏠 다른 채팅방</h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {liveChats.slice(1).map((chat) => {
+                {liveChats.filter(chat => chat.id !== activeRoomId).map((chat) => {
                   const handleChatClick = () => {
                     if (chat.status === 'active') {
-                      // 실제로는 다른 채팅방으로 이동하지만, 데모에서는 알림만 표시
-                      alert(`${chat.title}로 이동합니다! (데모 모드에서는 같은 채팅방이 표시됩니다)`)
+                      // 실제 채팅방으로 전환
+                      setActiveRoomId(chat.id)
+                      // 페이지 상단으로 스크롤
+                      window.scrollTo({ top: 0, behavior: 'smooth' })
                     } else {
                       alert(`${chat.title}은(는) ${chat.time}에 예정되어 있습니다.`)
                     }
