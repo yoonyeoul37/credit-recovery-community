@@ -48,6 +48,8 @@ export default function SystemSettings() {
 
   const loadNotices = () => {
     try {
+      if (typeof window === 'undefined') return
+      
       const savedNotices = localStorage.getItem('admin-notices')
       if (savedNotices) {
         setNotices(JSON.parse(savedNotices))
@@ -95,6 +97,7 @@ export default function SystemSettings() {
 
   const handleSave = () => {
     try {
+      if (typeof window === 'undefined') return
       localStorage.setItem('admin-settings', JSON.stringify(settings))
       alert('✅ 설정이 저장되었습니다.')
     } catch (error) {
@@ -110,6 +113,8 @@ export default function SystemSettings() {
     }
 
     try {
+      if (typeof window === 'undefined') return
+      
       const now = new Date().toISOString()
       
       if (editingNotice) {
@@ -157,6 +162,7 @@ export default function SystemSettings() {
     if (!confirm('이 공지사항을 삭제하시겠습니까?')) return
 
     try {
+      if (typeof window === 'undefined') return
       const updatedNotices = notices.filter(notice => notice.id !== id)
       setNotices(updatedNotices)
       localStorage.setItem('admin-notices', JSON.stringify(updatedNotices))
@@ -169,6 +175,7 @@ export default function SystemSettings() {
   // 공지사항 활성화/비활성화
   const toggleNoticeStatus = (id: number) => {
     try {
+      if (typeof window === 'undefined') return
       const updatedNotices = notices.map(notice =>
         notice.id === id
           ? { ...notice, isActive: !notice.isActive, updatedAt: new Date().toISOString() }

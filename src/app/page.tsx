@@ -147,6 +147,11 @@ export default function HomePage() {
   useEffect(() => {
     const loadNotices = () => {
       try {
+        if (typeof window === 'undefined') {
+          setNoticesLoading(false)
+          return
+        }
+        
         const savedNotices = localStorage.getItem('admin-notices')
         if (savedNotices) {
           const allNotices = JSON.parse(savedNotices)
