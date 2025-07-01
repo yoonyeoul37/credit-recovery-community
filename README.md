@@ -1,28 +1,3 @@
-# 신용회복 커뮤니티
-
-신용회복과 재기를 위한 따뜻한 커뮤니티 플랫폼입니다.
-
-## 주요 기능
-- 💳 신용이야기
-- 🔄 개인회생
-- 🏢 법인회생  
-- 💰 대출이야기
-- ⭐ 성공사례
-- 💬 실시간상담
-- 📢 공지사항 관리 (NEW!)
-
-## 기술 스택
-- Next.js 15.3.4
-- Supabase
-- Tailwind CSS
-- TypeScript
-
-## 배포
-- https://credit-recovery-community.vercel.app
-
----
-*업데이트: 2024년 - 공지사항 관리 기능 추가*
-
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
 ## Getting Started

@@ -287,70 +287,53 @@ export default function PostManagement() {
   }
 
   const deletePost = async (id: number) => {
-    if (!confirm('정말로 이 게시글을 삭제하시겠습니까?\n\n⚠️ 이 작업은 되돌릴 수 없습니다.')) return
+    if (!confirm('정말로 이 게시글을 삭제하시겠습니까?')) return
 
-    console.log('🗑️ 관리자: 게시글 삭제 시작 - ID:', id)
-    
-    // 즉시 화면에서 제거 (사용자 경험 개선)
-    const originalPosts = [...posts]
-    setPosts(posts.filter(post => post.id !== id))
-    
-    // 로컬 스토리지에서 즉시 제거 (관리자 우선 처리)
     try {
+      console.log('🗑️ 관리자: 게시글 삭제 시작:', id)
+      
+      const { supabase, isDemoMode } = await import('@/lib/supabase')
+      
+      if (isDemoMode) {
+        console.log('📋 데모 모드: 로컬 삭제만 수행')
+        setPosts(posts.filter(post => post.id !== id))
+        return
+      }
+
+      // Supabase에서 실제 삭제 (soft delete)
+      const { error } = await supabase
+        .from('posts')
+        .update({ is_deleted: true })
+        .eq('id', id)
+
+      if (error) {
+        console.warn('⚠️ Supabase 게시글 삭제 실패 - 로컬 삭제로 대체')
+        
+        // 로컬 스토리지에서도 삭제
+        const localPosts = JSON.parse(localStorage.getItem('community-posts') || '[]')
+        const updatedPosts = localPosts.filter((post: any) => post.id !== id)
+        localStorage.setItem('community-posts', JSON.stringify(updatedPosts))
+        
+        // 화면에서 제거
+        setPosts(posts.filter(post => post.id !== id))
+      } else {
+        console.log('✅ Supabase 게시글 삭제 성공')
+        
+        // 성공 시 목록 새로고침
+        await loadPosts()
+      }
+
+    } catch (error) {
+      console.warn('⚠️ 게시글 삭제 완전 실패 - 로컬 삭제로 대체')
+      
+      // 로컬 스토리지에서 삭제
       const localPosts = JSON.parse(localStorage.getItem('community-posts') || '[]')
       const updatedPosts = localPosts.filter((post: any) => post.id !== id)
       localStorage.setItem('community-posts', JSON.stringify(updatedPosts))
-      console.log('✅ 로컬 스토리지에서 게시글 제거 완료')
-    } catch (localError) {
-      console.warn('⚠️ 로컬 스토리지 처리 실패:', localError)
-    }
-
-    // Supabase 백그라운드 삭제 시도 (실패해도 무시)
-    try {
-      const { supabase, isDemoMode } = await import('@/lib/supabase')
       
-      if (!isDemoMode) {
-        console.log('🔄 백그라운드 Supabase 삭제 시도...')
-        
-        // 여러 방법으로 시도하되, 실패해도 사용자에게는 성공으로 표시
-        const deleteAttempts = [
-          // 시도 1: Soft delete
-          () => supabase.from('posts').update({ 
-            is_deleted: true, 
-            deleted_at: new Date().toISOString() 
-          }).eq('id', id),
-          
-          // 시도 2: Hard delete  
-          () => supabase.from('posts').delete().eq('id', id),
-          
-          // 시도 3: 상태 숨김으로 변경
-          () => supabase.from('posts').update({ 
-            title: '[삭제된 게시글]',
-            content: '이 게시글은 관리자에 의해 삭제되었습니다.',
-            is_deleted: true
-          }).eq('id', id)
-        ]
-
-        for (let i = 0; i < deleteAttempts.length; i++) {
-          try {
-            const { error } = await deleteAttempts[i]()
-            if (!error) {
-              console.log(`✅ Supabase 삭제 성공 (방법 ${i + 1})`)
-              break
-            } else {
-              console.warn(`⚠️ Supabase 삭제 방법 ${i + 1} 실패:`, error)
-            }
-          } catch (attemptError) {
-            console.warn(`⚠️ Supabase 삭제 방법 ${i + 1} 예외:`, attemptError)
-          }
-        }
-      }
-    } catch (supabaseError) {
-      console.warn('⚠️ Supabase 삭제 전체 실패 (무시됨):', supabaseError)
+      // 화면에서 제거
+      setPosts(posts.filter(post => post.id !== id))
     }
-
-    // 사용자에게는 항상 성공으로 표시 (관리자 권한)
-    alert('✅ 게시글이 성공적으로 삭제되었습니다.\n(관리자 모드)')
   }
 
   const getStatusBadge = (status: string) => {

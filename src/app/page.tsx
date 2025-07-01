@@ -1,24 +1,12 @@
 'use client'
 
 import Link from 'next/link'
-import { ArrowRight, TrendingUp, MessageCircleHeart, Users, Sparkles, Heart, Eye, MessageCircle, ThumbsUp, Search, Bell, Pin, AlertCircle } from 'lucide-react'
+import { ArrowRight, TrendingUp, MessageCircleHeart, Users, Sparkles, Heart, Eye, MessageCircle, ThumbsUp, Search } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import Advertisement from '@/components/Advertisement'
 import { sampleAds } from '@/lib/ads'
 import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
-
-// 공지사항 인터페이스
-interface Notice {
-  id: number
-  title: string
-  content: string
-  type: 'info' | 'warning' | 'urgent'
-  isActive: boolean
-  isPinned: boolean
-  createdAt: string
-  updatedAt: string
-}
 
 // 카테고리 데이터
 const categories = [
@@ -108,8 +96,6 @@ export default function HomePage() {
   const [loading, setLoading] = useState(true)
   const [chatQuestions, setChatQuestions] = useState<ChatQuestion[]>([])
   const [questionsLoading, setQuestionsLoading] = useState(true)
-  const [notices, setNotices] = useState<Notice[]>([])
-  const [noticesLoading, setNoticesLoading] = useState(true)
 
   // 채팅방 이름 매핑
   const getRoomName = (roomId: number): string => {
@@ -121,61 +107,6 @@ export default function HomePage() {
     }
     return roomNames[roomId] || `${roomId}번 채팅방`
   }
-
-  // 공지사항 타입별 스타일
-  const getNoticeTypeStyle = (type: string) => {
-    switch (type) {
-      case 'urgent':
-        return 'bg-red-100 text-red-800 border-red-200'
-      case 'warning':
-        return 'bg-yellow-100 text-yellow-800 border-yellow-200'
-      default:
-        return 'bg-blue-100 text-blue-800 border-blue-200'
-    }
-  }
-
-  // 공지사항 타입 텍스트
-  const getNoticeTypeText = (type: string) => {
-    switch (type) {
-      case 'urgent': return '🚨 긴급'
-      case 'warning': return '⚠️ 주의'
-      default: return 'ℹ️ 안내'
-    }
-  }
-
-  // 공지사항 로드
-  useEffect(() => {
-    const loadNotices = () => {
-      try {
-        if (typeof window === 'undefined') {
-          setNoticesLoading(false)
-          return
-        }
-        
-        const savedNotices = localStorage.getItem('admin-notices')
-        if (savedNotices) {
-          const allNotices = JSON.parse(savedNotices)
-          // 활성화된 공지사항만 필터링하고 고정된 것 우선 정렬
-          const activeNotices = allNotices
-            .filter((notice: Notice) => notice.isActive)
-            .sort((a: Notice, b: Notice) => {
-              if (a.isPinned && !b.isPinned) return -1
-              if (!a.isPinned && b.isPinned) return 1
-              return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-            })
-            .slice(0, 3) // 최대 3개까지만 표시
-          
-          setNotices(activeNotices)
-        }
-      } catch (error) {
-        console.error('공지사항 로드 실패:', error)
-      } finally {
-        setNoticesLoading(false)
-      }
-    }
-
-    loadNotices()
-  }, [])
 
   // 최근 채팅 질문들 로드
   useEffect(() => {
@@ -340,7 +271,7 @@ export default function HomePage() {
           
           <h1 className="text-4xl md:text-6xl font-bold text-gray-900 mb-6">
             혼자가 아니에요
-            <span className="block text-green-600">함께 새 출발해요</span>
+            <span className="block text-green-600">함께 새 출발해요 ✨</span>
           </h1>
           
           <p className="text-xl text-gray-600 mb-8 max-w-2xl mx-auto">
@@ -388,62 +319,6 @@ export default function HomePage() {
             </Link>
           </div>
         </div>
-
-        {/* 공지사항 섹션 - 컴팩트 버전 */}
-        {!noticesLoading && notices.length > 0 && (
-          <div className="bg-gradient-to-r from-blue-50 to-green-50 rounded-xl p-4 mb-8 border border-blue-200">
-            <div className="flex items-center mb-3">
-              <Bell className="w-4 h-4 text-blue-500 mr-2" />
-              <h2 className="text-lg font-bold text-gray-900">📢 공지사항</h2>
-            </div>
-            
-            <div className="space-y-2">
-              {notices.slice(0, 2).map((notice, index) => (
-                <div key={notice.id} className={`p-3 rounded-lg border transition-all hover:shadow-sm ${
-                  notice.type === 'urgent' ? 'bg-red-50 border-red-200' :
-                  notice.type === 'warning' ? 'bg-yellow-50 border-yellow-200' :
-                  'bg-white border-blue-200'
-                }`}>
-                  <div className="flex items-center justify-between">
-                    <div className="flex-1">
-                      <div className="flex items-center space-x-2 mb-1">
-                        <span className={`px-1.5 py-0.5 rounded text-xs font-medium ${
-                          notice.type === 'urgent' ? 'bg-red-100 text-red-700' :
-                          notice.type === 'warning' ? 'bg-yellow-100 text-yellow-700' :
-                          'bg-blue-100 text-blue-700'
-                        }`}>
-                          {notice.type === 'urgent' ? '🚨' : notice.type === 'warning' ? '⚠️' : 'ℹ️'}
-                        </span>
-                        {notice.isPinned && <Pin className="w-3 h-3 text-green-600" />}
-                        <span className="text-xs text-gray-500">
-                          {new Date(notice.createdAt).toLocaleDateString('ko-KR', { month: 'short', day: 'numeric' })}
-                        </span>
-                      </div>
-                      
-                      <h3 className="text-sm font-semibold text-gray-900 mb-1">
-                        {notice.title}
-                      </h3>
-                      
-                      <p className="text-xs text-gray-600 leading-relaxed">
-                        {notice.content.length > 80 
-                          ? notice.content.substring(0, 80) + '...' 
-                          : notice.content}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              ))}
-              
-              {notices.length > 2 && (
-                <div className="text-center pt-2">
-                  <span className="text-xs text-gray-500">
-                    +{notices.length - 2}개 공지사항 더 있음
-                  </span>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
 
         {/* 카테고리 섹션 */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-16">
@@ -554,13 +429,10 @@ export default function HomePage() {
                         <div className="flex items-center space-x-4 text-sm text-gray-500">
                           <span className="font-medium text-green-700">💚 {question.user_nickname}</span>
                         </div>
-                        <Link
-                          href={`/live-chat?room=${question.room_id}`}
-                          className="flex items-center text-sm text-blue-600 hover:text-blue-700 transition-colors hover:underline"
-                        >
+                        <div className="flex items-center text-sm text-blue-600">
                           <MessageCircle className="w-4 h-4 mr-1" />
-                          <span className="cursor-pointer">답변하러 가기</span>
-                        </Link>
+                          <span>답변하러 가기</span>
+                        </div>
                       </div>
                     </div>
                   </div>
