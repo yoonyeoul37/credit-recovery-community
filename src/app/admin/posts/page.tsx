@@ -236,13 +236,6 @@ export default function PostManagement() {
     }
   }
 
-  const [searchTerm, setSearchTerm] = useState('')
-  const [selectedCategory, setSelectedCategory] = useState('all')
-  const [selectedStatus, setSelectedStatus] = useState('all')
-  const [showReportedOnly, setShowReportedOnly] = useState(false)
-  const [currentPage, setCurrentPage] = useState(1)
-  const itemsPerPage = 10
-
   // 검색어나 필터 변경 시 첫 페이지로 이동
   useEffect(() => {
     setCurrentPage(1)

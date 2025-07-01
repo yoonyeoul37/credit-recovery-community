@@ -5,8 +5,9 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { 
   ArrowLeft, Heart, MessageCircle, Eye, Clock, User, Send, 
-  ThumbsUp, Reply, MoreVertical, Flag, Share2, Edit3, Trash2, X, Image
+  ThumbsUp, Reply, MoreVertical, Flag, Share2, Edit3, Trash2, X, Image as LucideImage
 } from 'lucide-react'
+import Image from 'next/image'
 
 interface Comment {
   id: number
@@ -716,6 +717,11 @@ const PostDetail = ({ postId, category, className = '' }: PostDetailProps) => {
 
   // 댓글 좋아요 토글
   const handleCommentLike = async (commentId: number) => {
+    const likedComments = getLikedComments();
+    if (likedComments.includes(commentId)) {
+      alert('이미 추천하셨습니다!');
+      return;
+    }
     console.log('👍 댓글 좋아요 토글:', commentId)
 
     try {
@@ -746,6 +752,7 @@ const PostDetail = ({ postId, category, className = '' }: PostDetailProps) => {
         console.warn('⚠️ Supabase 좋아요 업데이트 실패 - 로컬 처리')
         updateCommentLikeLocally(commentId)
       } else {
+        setLikedComments([...likedComments, commentId]);
         console.log('✅ Supabase 댓글 좋아요 업데이트 성공')
         
         // 댓글 목록 새로고침
@@ -1098,6 +1105,20 @@ const PostDetail = ({ postId, category, className = '' }: PostDetailProps) => {
     setPasswordAction(null)
   }
 
+  // 댓글 좋아요(엄지) 중복 방지: localStorage liked-comments
+  const getLikedComments = () => {
+    if (typeof window === 'undefined') return [];
+    try {
+      return JSON.parse(localStorage.getItem('liked-comments') || '[]');
+    } catch {
+      return [];
+    }
+  };
+  const setLikedComments = (arr: number[]) => {
+    if (typeof window === 'undefined') return;
+    localStorage.setItem('liked-comments', JSON.stringify(arr));
+  };
+
   if (loading) {
     return (
       <div className={`max-w-4xl mx-auto ${className}`}>
@@ -1190,23 +1211,30 @@ const PostDetail = ({ postId, category, className = '' }: PostDetailProps) => {
           {post.images && post.images.length > 0 && (
             <div className="mt-6">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {post.images.map((image, index) => (
-                  <div key={index} className="relative group cursor-pointer">
-                    <img
-                      src={image}
-                      alt={`게시글 이미지 ${index + 1}`}
-                      className="w-full h-48 sm:h-64 object-cover rounded-lg border border-gray-200 hover:shadow-lg transition-shadow"
-                      onClick={() => {
-                        window.open(image, '_blank')
-                      }}
-                    />
-                    <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-10 transition-all rounded-lg flex items-center justify-center">
-                      <div className="opacity-0 group-hover:opacity-100 transition-opacity">
-                        <Image className="w-8 h-8 text-white drop-shadow-lg" />
+                {(post.images.filter(url => url && url.startsWith('http'))).map((image, index) => {
+                  const safeUrl = encodeURI(image);
+                  console.log('상세 이미지 src:', safeUrl);
+                  return (
+                    <div key={index} className="relative group cursor-pointer">
+                      <Image
+                        src={safeUrl}
+                        alt={`게시글 이미지 ${index + 1}`}
+                        width={600}
+                        height={400}
+                        style={{ width: '100%', height: 'auto', background: 'white', display: 'block', minHeight: '100px', objectFit: 'contain', borderRadius: '12px', border: '1px solid #e5e7eb', boxShadow: '0 1px 4px rgba(0,0,0,0.04)' }}
+                        onClick={() => {
+                          window.open(safeUrl, '_blank')
+                        }}
+                        unoptimized
+                      />
+                      <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-10 transition-all rounded-lg flex items-center justify-center">
+                        <div className="opacity-0 group-hover:opacity-100 transition-opacity">
+                          <LucideImage className="w-8 h-8 text-white drop-shadow-lg" />
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           )}
@@ -1387,7 +1415,8 @@ const PostDetail = ({ postId, category, className = '' }: PostDetailProps) => {
                   <div className="flex items-center space-x-4 text-sm">
                     <button 
                       onClick={() => handleCommentLike(comment.id)}
-                      className="flex items-center space-x-1 text-gray-500 hover:text-blue-600 transition-colors"
+                      disabled={getLikedComments().includes(comment.id)}
+                      className={`flex items-center space-x-1 text-gray-500 hover:text-blue-600 transition-colors ${getLikedComments().includes(comment.id) ? 'text-blue-600 opacity-60 cursor-not-allowed' : ''}`}
                     >
                       <ThumbsUp className="w-3 h-3" />
                       <span>{safeCount(comment.likes_count, 0)}</span>
@@ -1457,7 +1486,8 @@ const PostDetail = ({ postId, category, className = '' }: PostDetailProps) => {
                   <div className="flex items-center space-x-3">
                     <button 
                       onClick={() => handleCommentLike(reply.id)}
-                      className="flex items-center space-x-1 text-xs text-gray-500 hover:text-blue-600 transition-colors"
+                      disabled={getLikedComments().includes(reply.id)}
+                      className={`flex items-center space-x-1 text-xs text-gray-500 hover:text-blue-600 transition-colors ${getLikedComments().includes(reply.id) ? 'text-blue-600 opacity-60 cursor-not-allowed' : ''}`}
                     >
                       <ThumbsUp className="w-3 h-3" />
                       <span>{safeCount(reply.likes_count, 0)}</span>

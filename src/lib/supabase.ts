@@ -1,24 +1,26 @@
 import { createClient } from '@supabase/supabase-js'
 
-// 배포 환경에서 환경변수 문제 해결을 위한 임시 하드코딩
+// 운영 환경 강제 설정 - 환경변수 문제 해결을 위한 직접 설정
+const PRODUCTION_SUPABASE_URL = 'https://bqsyujtveafhxwknpxik.supabase.co'
+const PRODUCTION_SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJxc3l1anR2ZWFmaHh3a25weGlrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTEyMDI2OTMsImV4cCI6MjA2Njc3ODY5M30.Y38nmrl3V06L7_WasiTLRK8pT-N3Cvf_0h3hxuN9TyA'
+
+// 환경변수 우선 시도, 실패 시 하드코딩 값 사용
 const supabaseUrl = typeof window === 'undefined'
-  ? (process.env.NEXT_PUBLIC_SUPABASE_URL?.trim() || 'https://bqsyujtveafhxwknpxik.supabase.co')
-  : (window?.__NEXT_PUBLIC_SUPABASE_URL__ || 'https://bqsyujtveafhxwknpxik.supabase.co').trim();
+  ? (process.env.NEXT_PUBLIC_SUPABASE_URL?.trim() || PRODUCTION_SUPABASE_URL)
+  : (window?.__NEXT_PUBLIC_SUPABASE_URL__?.trim() || PRODUCTION_SUPABASE_URL);
+
 const supabaseAnonKey = typeof window === 'undefined'
-  ? (process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim() || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJxc3l1anR2ZWFmaHh3a25weGlrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzUxMzAzMDIsImV4cCI6MjA1MDcwNjMwMn0.zYl8eSuClxIGjJwXVklXgz6TYM8NxkWJpK1Qb1xOA7s')
-  : (window?.__NEXT_PUBLIC_SUPABASE_ANON_KEY__ || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJxc3l1anR2ZWFmaHh3a25weGlrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzUxMzAzMDIsImV4cCI6MjA1MDcwNjMwMn0.zYl8eSuClxIGjJwXVklXgz6TYM8NxkWJpK1Qb1xOA7s').trim();
+  ? (process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim() || PRODUCTION_SUPABASE_ANON_KEY)
+  : (window?.__NEXT_PUBLIC_SUPABASE_ANON_KEY__?.trim() || PRODUCTION_SUPABASE_ANON_KEY);
 
-// 실제 프로젝트 주소/키가 아니면 로컬 데모 모드 (하드코딩 값은 제외)
-export const isDemoMode =
-  !supabaseUrl ||
-  !supabaseAnonKey ||
-  supabaseUrl === '' ||
-  supabaseAnonKey === '' ||
-  supabaseUrl.includes('your-project-id') ||
-  supabaseAnonKey.includes('your-anon-key')
+// 실제 데이터베이스 사용 - 운영 모드
+export const isDemoMode = false
 
-console.log('[supabase.ts] supabaseUrl:', supabaseUrl)
-console.log('[supabase.ts] isDemoMode:', isDemoMode)
+console.log('[supabase.ts] 🚀 운영 모드 활성화 - RLS 정책 설정됨!')
+console.log('[supabase.ts] 🔗 supabaseUrl:', supabaseUrl?.substring(0, 40) + '...')
+console.log('[supabase.ts] 🔑 supabaseKey 길이:', supabaseAnonKey?.length)
+console.log('[supabase.ts] 🎯 isDemoMode:', isDemoMode)
+console.log('[supabase.ts] 🌐 환경:', typeof window === 'undefined' ? 'Server' : 'Client')
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {

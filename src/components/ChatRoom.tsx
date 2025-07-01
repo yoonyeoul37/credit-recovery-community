@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useRef, useEffect, useCallback } from 'react'
-import { Send, Users, LogIn, LogOut, AlertCircle, Loader2 } from 'lucide-react'
+import { Send, Users, LogIn, LogOut, AlertCircle, Loader2, Edit3, Check, X } from 'lucide-react'
 import { useChat } from '@/hooks/useChat'
 import { ChatMessage } from '@/lib/supabase'
 
@@ -12,7 +12,10 @@ interface ChatRoomProps {
 
 const ChatRoom = ({ roomId, className = '' }: ChatRoomProps) => {
   const [inputMessage, setInputMessage] = useState('')
+  const [isEditingNickname, setIsEditingNickname] = useState(false)
+  const [nicknameInput, setNicknameInput] = useState('')
   const inputRef = useRef<HTMLInputElement>(null)
+  const nicknameInputRef = useRef<HTMLInputElement>(null)
   const messagesContainerRef = useRef<HTMLDivElement>(null)
 
   const {
@@ -26,6 +29,7 @@ const ChatRoom = ({ roomId, className = '' }: ChatRoomProps) => {
     sendMessage,
     joinRoom,
     leaveRoom,
+    changeNickname,
     participantCount
   } = useChat(roomId)
 
@@ -93,6 +97,36 @@ const ChatRoom = ({ roomId, className = '' }: ChatRoomProps) => {
     setTimeout(() => {
       scrollToBottom()
     }, 100)
+  }
+
+  // 닉네임 변경 핸들러들
+  const handleEditNickname = () => {
+    setNicknameInput(userNickname)
+    setIsEditingNickname(true)
+    setTimeout(() => {
+      nicknameInputRef.current?.focus()
+      nicknameInputRef.current?.select()
+    }, 100)
+  }
+
+  const handleSaveNickname = () => {
+    if (changeNickname(nicknameInput)) {
+      setIsEditingNickname(false)
+      setNicknameInput('')
+    }
+  }
+
+  const handleCancelNickname = () => {
+    setIsEditingNickname(false)
+    setNicknameInput('')
+  }
+
+  const handleNicknameKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      handleSaveNickname()
+    } else if (e.key === 'Escape') {
+      handleCancelNickname()
+    }
   }
 
   // 메시지 렌더링
@@ -183,6 +217,48 @@ const ChatRoom = ({ roomId, className = '' }: ChatRoomProps) => {
             <p className="text-sm text-gray-600">{room?.description}</p>
           </div>
           <div className="flex items-center space-x-4">
+            {/* 닉네임 표시/변경 */}
+            <div className="flex items-center space-x-2">
+              {isEditingNickname ? (
+                <div className="flex items-center space-x-1">
+                  <input
+                    ref={nicknameInputRef}
+                    type="text"
+                    value={nicknameInput}
+                    onChange={(e) => setNicknameInput(e.target.value)}
+                    onKeyDown={handleNicknameKeyPress}
+                    className="px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="닉네임 입력"
+                    maxLength={20}
+                  />
+                  <button
+                    onClick={handleSaveNickname}
+                    className="p-1 text-green-600 hover:bg-green-50 rounded"
+                    title="저장"
+                  >
+                    <Check className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={handleCancelNickname}
+                    className="p-1 text-red-600 hover:bg-red-50 rounded"
+                    title="취소"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              ) : (
+                <div className="flex items-center space-x-1 group">
+                  <span className="text-sm text-gray-700 font-medium">💚 {userNickname}</span>
+                  <button
+                    onClick={handleEditNickname}
+                    className="p-1 text-gray-400 hover:text-gray-600 opacity-0 group-hover:opacity-100 transition-opacity"
+                    title="닉네임 변경"
+                  >
+                    <Edit3 className="w-3 h-3" />
+                  </button>
+                </div>
+              )}
+            </div>
             <div className="flex items-center space-x-2 text-sm text-gray-600">
               <Users className="w-4 h-4" />
               <span>{participantCount}명 참여중</span>
@@ -236,35 +312,38 @@ const ChatRoom = ({ roomId, className = '' }: ChatRoomProps) => {
 
       {/* 메시지 입력 영역 */}
       <div className="border-t border-gray-100 p-4">
-        {isConnected ? (
-          <form onSubmit={handleSendMessage} className="flex space-x-2">
-            <input
-              ref={inputRef}
-              type="text"
-              value={inputMessage}
-              onChange={(e) => setInputMessage(e.target.value)}
-              onKeyPress={handleKeyPress}
-              onFocus={handleInputFocus}
-              placeholder="메시지를 입력하세요..."
-              className="flex-1 px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              maxLength={500}
-            />
-            <button
-              type="submit"
-              disabled={!inputMessage.trim()}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-            >
-              <Send className="w-4 h-4" />
-            </button>
-          </form>
-        ) : (
-          <div className="text-center">
-            <p className="text-gray-600 mb-3">채팅에 참여하시겠어요?</p>
+        <form onSubmit={handleSendMessage} className="flex space-x-2">
+          <input
+            ref={inputRef}
+            type="text"
+            value={inputMessage}
+            onChange={(e) => setInputMessage(e.target.value)}
+            onKeyPress={handleKeyPress}
+            onFocus={handleInputFocus}
+            placeholder={isConnected ? "메시지를 입력하세요..." : "메시지를 입력하면 자동으로 채팅에 참여됩니다..."}
+            className="flex-1 px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            maxLength={500}
+          />
+          <button
+            type="submit"
+            disabled={!inputMessage.trim()}
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          >
+            <Send className="w-4 h-4" />
+          </button>
+        </form>
+        
+        {/* 연결 상태 표시 */}
+        {!isConnected && (
+          <div className="mt-2 text-center">
+            <p className="text-sm text-gray-500">
+              💡 메시지를 보내면 자동으로 채팅방에 참여됩니다
+            </p>
             <button
               onClick={joinRoom}
-              className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+              className="mt-2 px-4 py-1 bg-green-100 text-green-700 rounded-full text-sm hover:bg-green-200 transition-colors"
             >
-              채팅 참여하기
+              또는 먼저 참여하기
             </button>
           </div>
         )}

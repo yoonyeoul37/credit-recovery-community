@@ -156,143 +156,9 @@ const PostWrite = ({ className = '' }: PostWriteProps) => {
 
   const categoryInfo = getCategoryInfo(category)
 
-  const handleAddTag = () => {
-    if (currentTag.trim() && !tags.includes(currentTag.trim()) && tags.length < 5) {
-      setTags([...tags, currentTag.trim()])
-      setCurrentTag('')
-    }
-  }
-
-  const handleRemoveTag = (tagToRemove: string) => {
-    setTags(tags.filter(tag => tag !== tagToRemove))
-  }
-
   const handleSelectRecommendedTag = (tag: string) => {
     if (!tags.includes(tag) && tags.length < 5) {
       setTags([...tags, tag])
-    }
-  }
-
-  const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
-      e.preventDefault()
-      handleAddTag()
-    }
-  }
-
-  const uploadImageToSupabase = async (file: File): Promise<string | null> => {
-    try {
-      // 🚀 환경변수 먼저 체크
-      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-      const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-      
-      if (!supabaseUrl || !supabaseKey || 
-          supabaseUrl.includes('your-project-id') || 
-          supabaseKey.includes('your-anon-key')) {
-        console.log('🏠 환경변수 없음 - 로컬 미리보기만 사용')
-        return null
-      }
-      
-      // 로컬 개발 환경에서는 네트워크 제한으로 건너뛰기
-      const isLocalDev = typeof window !== 'undefined' && 
-        (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
-      
-      if (isLocalDev) {
-        console.log('🏠 로컬 개발 환경 - Storage 업로드 건너뛰기')
-        return null
-      }
-
-      // 파일 유효성 재검증
-      if (!file || !file.type.startsWith('image/')) {
-        console.error('❌ 유효하지 않은 파일 형식:', file?.type)
-        return null
-      }
-
-      if (file.size > 5 * 1024 * 1024) {
-        console.error('❌ 파일 크기 초과:', `${(file.size / 1024 / 1024).toFixed(2)}MB`)
-        return null
-      }
-
-      const { supabase } = await import('@/lib/supabase')
-      
-      // 더 안전한 파일명 생성
-      const fileExt = file.name.split('.').pop()?.toLowerCase() || 'jpg'
-      const timestamp = Date.now()
-      const randomId = Math.random().toString(36).substring(2, 8)
-      const fileName = `${timestamp}-${randomId}.${fileExt}`
-      
-      console.log('☁️ Supabase Storage 업로드 시작:', {
-        fileName,
-        originalName: file.name,
-        size: `${(file.size / 1024 / 1024).toFixed(2)}MB`,
-        type: file.type
-      })
-      
-      // 네트워크 연결 상태 확인
-      if (typeof navigator !== 'undefined' && !navigator.onLine) {
-        console.warn('🔌 네트워크 연결이 끊어져 있습니다')
-        return null
-      }
-      
-      // 짧은 타임아웃으로 빠른 실패 처리
-      const uploadPromise = supabase.storage
-        .from('post-images')
-        .upload(fileName, file, {
-          cacheControl: '3600',
-          upsert: false
-        })
-      
-      const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Upload timeout after 8 seconds')), 8000)
-      )
-      
-      const { data, error } = await Promise.race([uploadPromise, timeoutPromise]) as any
-      
-      if (error) {
-        console.warn('⚠️ Supabase Storage 업로드 실패 - 로컬 미리보기 유지:', {
-          message: error.message || 'Unknown error',
-          code: error.code || 'UNKNOWN',
-          details: error.details || 'Storage 업로드 중 문제가 발생했습니다',
-          fileName
-        })
-        // Storage 실패해도 로컬 미리보기는 계속 사용
-        return null
-      }
-      
-      if (!data?.path) {
-        console.warn('⚠️ 업로드 성공했지만 경로 정보 없음')
-        return null
-      }
-      
-      // 공개 URL 가져오기
-      const { data: { publicUrl } } = supabase.storage
-        .from('post-images')
-        .getPublicUrl(data.path)
-      
-      if (!publicUrl || !publicUrl.startsWith('http')) {
-        console.warn('⚠️ 유효하지 않은 공개 URL:', publicUrl)
-        return null
-      }
-      
-      console.log('✅ Supabase Storage 업로드 성공:', {
-        fileName,
-        path: data.path,
-        publicUrl
-      })
-      
-      return publicUrl
-      
-    } catch (error) {
-      console.warn('⚠️ Supabase Storage 연결 실패 - 로컬 미리보기로 계속 사용')
-      console.log('📝 오류 상세:', {
-        name: error instanceof Error ? error.name : 'NetworkError',
-        message: error instanceof Error ? error.message : 'Failed to fetch',
-        stack: error instanceof Error ? error.stack?.substring(0, 200) : undefined,
-        info: 'Storage 연결 실패 시 로컬 미리보기를 사용합니다',
-        solution: '로컬 미리보기로도 정상적으로 게시글 작성이 가능합니다'
-      })
-      // Storage 실패해도 로컬 미리보기는 계속 사용
-      return null
     }
   }
 
@@ -311,42 +177,22 @@ const PostWrite = ({ className = '' }: PostWriteProps) => {
     }
     const newImages = [...images, ...validFiles]
     setImages(newImages)
+    // 이미지 업로드: 미리보기 대신 실제 업로드만
     for (const file of validFiles) {
-      const reader = new FileReader()
-      reader.onload = async (e) => {
-        const localPreview = e.target?.result as string
-        if (!localPreview || !localPreview.startsWith('data:image/')) {
-          alert(`"${file.name}"은(는) 유효한 이미지 파일이 아닙니다.`)
-          return
+      try {
+        console.log('업로드 시도:', file.name)
+        const publicUrl = await uploadImageToSupabase(file)
+        if (publicUrl && publicUrl.startsWith('http')) {
+          setImagePreviews(prev => [...prev, publicUrl])
+          console.log('업로드 성공:', publicUrl)
+        } else {
+          alert(`이미지 "${file.name}" 업로드에 실패했습니다. 다시 시도해 주세요.`)
+          console.error('업로드 실패:', file.name)
         }
-        setImagePreviews(prev => [...prev, localPreview])
-        try {
-          const publicUrl = await uploadImageToSupabase(file)
-          if (publicUrl && publicUrl.startsWith('http')) {
-            setImagePreviews(prev => prev.map(preview =>
-              preview === localPreview ? publicUrl : preview
-            ))
-            console.log('🔄 미리보기를 Supabase URL로 교체:', publicUrl)
-          } else {
-            // 로컬 개발 환경에서는 alert 띄우지 않음
-            if (!(window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')) {
-              alert(`이미지 "${file.name}" 업로드에 실패했습니다. 다시 시도해 주세요.`)
-            } else {
-              console.log(`로컬 개발 환경 - "${file.name}" 미리보기만 사용 (정상 동작)`)
-            }
-          }
-        } catch (uploadError) {
-          if (!(window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')) {
-            alert(`이미지 "${file.name}" 업로드 중 오류가 발생했습니다.`)
-          } else {
-            console.log(`로컬 개발 환경 - "${file.name}" 미리보기만 사용 (정상 동작)`)
-          }
-        }
+      } catch (uploadError) {
+        alert(`이미지 "${file.name}" 업로드 중 오류가 발생했습니다.`)
+        console.error('업로드 예외:', file.name, uploadError)
       }
-      reader.onerror = (e) => {
-        alert(`이미지 "${file.name}" 읽기에 실패했습니다.`)
-      }
-      reader.readAsDataURL(file)
     }
   }
 
@@ -484,14 +330,10 @@ const PostWrite = ({ className = '' }: PostWriteProps) => {
     
     if (!title.trim()) {
       newErrors.title = '제목을 입력해주세요'
-    } else if (title.length < 5) {
-      newErrors.title = '제목은 5자 이상 입력해주세요'
     }
     
     if (!content.trim()) {
       newErrors.content = '내용을 입력해주세요'
-    } else if (content.length < 20) {
-      newErrors.content = '내용은 20자 이상 입력해주세요'
     }
 
     if (!userNickname.trim()) {
@@ -573,7 +415,13 @@ const PostWrite = ({ className = '' }: PostWriteProps) => {
         author_ip_hash: `user_${Date.now()}`,
         password_hash: password,
         tags: tags,
-        images: uploadedImageUrls
+        images: uploadedImageUrls,
+        view_count: 0,
+        like_count: 0,
+        comment_count: 0,
+        is_hot: false,
+        is_notice: false,
+        is_deleted: false
       }
       
       console.log('📤 게시글 저장 시도:', {
@@ -643,9 +491,9 @@ const PostWrite = ({ className = '' }: PostWriteProps) => {
         // 부드러운 페이지 이동
         setTimeout(() => {
           if (data && data[0] && data[0].id) {
-            router.push(`/live-chat?refresh=1`)
+            router.push(`/${category}/${data[0].id}`)
           } else {
-            router.push(`/live-chat?refresh=1`)
+            router.push(`/${category}`)
           }
         }, 300)
       }
@@ -664,6 +512,87 @@ const PostWrite = ({ className = '' }: PostWriteProps) => {
       alert(`게시글 작성 중 오류가 발생했습니다: ${error instanceof Error ? error.message : '알 수 없는 오류'}`)
     }
     // isSubmitting은 페이지 이동으로 자동 해제됨
+  }
+
+  const uploadImageToSupabase = async (file: File): Promise<string | null> => {
+    try {
+      // 파일 유효성 재검증
+      if (!file || !file.type.startsWith('image/')) {
+        console.error('❌ 유효하지 않은 파일 형식:', file?.type)
+        return null
+      }
+      if (file.size > 5 * 1024 * 1024) {
+        console.error('❌ 파일 크기 초과:', `${(file.size / 1024 / 1024).toFixed(2)}MB`)
+        return null
+      }
+      const { supabase } = await import('@/lib/supabase')
+      const fileExt = file.name.split('.').pop()?.toLowerCase() || 'jpg'
+      const timestamp = Date.now()
+      const randomId = Math.random().toString(36).substring(2, 8)
+      const fileName = `${timestamp}-${randomId}.${fileExt}`
+      console.log('☁️ Supabase Storage 업로드 시작:', {
+        fileName,
+        originalName: file.name,
+        size: `${(file.size / 1024 / 1024).toFixed(2)}MB`,
+        type: file.type
+      })
+      if (typeof navigator !== 'undefined' && !navigator.onLine) {
+        console.warn('🔌 네트워크 연결이 끊어져 있습니다')
+        return null
+      }
+      const uploadPromise = supabase.storage
+        .from('post-images')
+        .upload(fileName, file, {
+          cacheControl: '3600',
+          upsert: false
+        })
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Upload timeout after 30 seconds')), 30000)
+      )
+      let data, error
+      try {
+        ({ data, error } = await Promise.race([uploadPromise, timeoutPromise]) as any)
+      } catch (e) {
+        console.error('❌ 업로드 타임아웃 또는 예외:', e)
+        alert(`이미지 "${file.name}" 업로드에 실패했습니다.\n사유: ${e instanceof Error ? e.message : e}`)
+        return null
+      }
+      console.log('📦 업로드 응답:', { data, error })
+      if (error) {
+        alert(`이미지 "${file.name}" 업로드에 실패했습니다.\n에러: ${error.message || error}`)
+        return null
+      }
+      if (!data?.path) {
+        alert(`이미지 "${file.name}" 업로드에 실패했습니다.\n경로 정보 없음`)
+        return null
+      }
+      const { data: publicUrlData } = supabase.storage
+        .from('post-images')
+        .getPublicUrl(data.path)
+      const publicUrl = publicUrlData?.publicUrl
+      console.log('🌐 publicUrl:', publicUrl)
+      if (!publicUrl || !publicUrl.startsWith('http')) {
+        alert(`이미지 "${file.name}" 업로드에 실패했습니다.\n유효하지 않은 공개 URL: ${publicUrl}`)
+        return null
+      }
+      console.log('✅ Supabase Storage 업로드 성공:', {
+        fileName,
+        path: data.path,
+        publicUrl
+      })
+      return publicUrl
+    } catch (error) {
+      console.warn('⚠️ Supabase Storage 연결 실패 - 로컬 미리보기로 계속 사용')
+      console.log('📝 오류 상세:', {
+        name: error instanceof Error ? error.name : 'NetworkError',
+        message: error instanceof Error ? error.message : 'Failed to fetch',
+        stack: error instanceof Error ? error.stack?.substring(0, 200) : undefined,
+        info: 'Storage 연결 실패 시 로컬 미리보기를 사용합니다',
+        solution: '로컬 미리보기로도 정상적으로 게시글 작성이 가능합니다'
+      })
+      alert(`이미지 "${file.name}" 업로드에 실패했습니다.\n에러: ${error instanceof Error ? error.message : error}`)
+      return null
+    }
   }
 
   return (
@@ -854,7 +783,7 @@ const PostWrite = ({ className = '' }: PostWriteProps) => {
                     <span>#{tag}</span>
                     <button
                       type="button"
-                      onClick={() => handleRemoveTag(tag)}
+                      onClick={() => handleSelectRecommendedTag(tag)}
                       className="hover:text-red-600 ml-1 w-4 h-4 flex items-center justify-center rounded-full hover:bg-red-100 transition-colors"
                       title="태그 제거"
                     >
@@ -883,7 +812,7 @@ const PostWrite = ({ className = '' }: PostWriteProps) => {
                     type="button"
                     onClick={() => {
                       if (isSelected) {
-                        handleRemoveTag(tag)
+                        handleSelectRecommendedTag(tag)
                       } else if (!isDisabled) {
                         handleSelectRecommendedTag(tag)
                       }
@@ -902,31 +831,6 @@ const PostWrite = ({ className = '' }: PostWriteProps) => {
                   </button>
                 )
               })}
-            </div>
-          </div>
-
-          {/* 직접 입력 */}
-          <div className="border-t border-gray-100 pt-4">
-            <div className="text-sm text-gray-600 mb-2">직접 입력:</div>
-            <div className="flex items-center space-x-2">
-              <Tag className="w-4 h-4 text-gray-500" />
-              <input
-                type="text"
-                value={currentTag}
-                onChange={(e) => setCurrentTag(e.target.value)}
-                onKeyPress={handleKeyPress}
-                placeholder="태그를 입력하고 Enter를 누르세요"
-                className="flex-1 px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                disabled={tags.length >= 5}
-              />
-              <button
-                type="button"
-                onClick={handleAddTag}
-                disabled={!currentTag.trim() || tags.length >= 5}
-                className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-              >
-                추가
-              </button>
             </div>
           </div>
           
@@ -986,64 +890,39 @@ const PostWrite = ({ className = '' }: PostWriteProps) => {
           {/* 이미지 미리보기 */}
           {imagePreviews.length > 0 && (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {imagePreviews.map((preview, index) => (
+              {imagePreviews
+                .filter(preview => preview.startsWith('http')) // publicUrl만 렌더링
+                .map((preview, index) => (
                 <div key={index} className="relative group">
                   <div className="w-full h-40 bg-gray-100 rounded-lg border border-gray-200 overflow-hidden shadow-sm">
-                    {preview ? (
-                      <img
-                        src={preview}
-                        alt={`미리보기 ${index + 1}`}
-                        className="w-full h-full object-cover transition-opacity duration-200"
-                        onLoad={(e) => {
-                          console.log('🖼️ 이미지 렌더링 성공:', {
-                            index: index + 1,
-                            isDataUrl: preview.startsWith('data:'),
-                            isHttpUrl: preview.startsWith('http'),
-                            urlLength: preview.length
-                          })
-                          e.currentTarget.style.opacity = '1'
-                        }}
-                        onError={(e) => {
-                          console.error('❌ 이미지 렌더링 실패:', {
-                            index: index + 1,
-                            preview: preview.substring(0, 100) + '...',
-                            isDataUrl: preview.startsWith('data:'),
-                            isHttpUrl: preview.startsWith('http')
-                          })
-                          
-                          // 부모 요소에 오류 상태 표시
-                          const parentDiv = e.currentTarget.parentElement
-                          if (parentDiv) {
-                            parentDiv.innerHTML = `
-                              <div class="w-full h-full flex flex-col items-center justify-center bg-red-50 text-red-500 text-xs p-4 border-2 border-red-200 border-dashed rounded">
-                                <div class="text-2xl mb-2">❌</div>
-                                <div class="font-medium mb-1">이미지 로딩 실패</div>
-                                <div class="text-center text-red-400">
-                                  파일이 손상되었거나<br/>
-                                  지원하지 않는 형식입니다
-                                </div>
+                    <img
+                      src={preview}
+                      alt={`미리보기 ${index + 1}`}
+                      className="w-full h-full object-cover transition-opacity duration-200"
+                      onLoad={(e) => {
+                        e.currentTarget.style.opacity = '1'
+                      }}
+                      onError={(e) => {
+                        const parentDiv = e.currentTarget.parentElement
+                        if (parentDiv) {
+                          parentDiv.innerHTML = `
+                            <div class=\"w-full h-full flex flex-col items-center justify-center bg-red-50 text-red-500 text-xs p-4 border-2 border-red-200 border-dashed rounded\">
+                              <div class=\"text-2xl mb-2\">❌</div>
+                              <div class=\"font-medium mb-1\">이미지 로딩 실패</div>
+                              <div class=\"text-center text-red-400\">
+                                파일이 손상됐거나<br/>
+                                지원하지 않는 형식입니다
                               </div>
-                            `
-                          }
-                        }}
-                        style={{ opacity: '0' }}
-                      />
-                    ) : (
-                      <div className="w-full h-full flex flex-col items-center justify-center bg-blue-50 text-blue-600 text-xs border-2 border-blue-200 border-dashed rounded">
-                        <div className="text-2xl mb-2 animate-pulse">📤</div>
-                        <div className="font-medium mb-1">업로딩 중...</div>
-                        <div className="text-center text-blue-400">
-                          이미지를 처리하고 있습니다
-                        </div>
-                      </div>
-                    )}
+                            </div>
+                          `
+                        }
+                      }}
+                      style={{ opacity: '0' }}
+                    />
                   </div>
                   <button
                     type="button"
-                    onClick={() => {
-                      console.log('🗑️ 이미지 제거:', index + 1)
-                      removeImage(index)
-                    }}
+                    onClick={() => removeImage(index)}
                     className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600"
                     title="이미지 제거"
                   >
