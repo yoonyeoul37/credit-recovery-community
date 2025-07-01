@@ -70,30 +70,6 @@ const liveChats = [
   }
 ]
 
-const recentQuestions = [
-  {
-    id: 1,
-    question: '신용점수 올리는 가장 빠른 방법이 뭔가요?',
-    author: '급한사람',
-    answers: 12,
-    time: '5분 전'
-  },
-  {
-    id: 2,
-    question: '개인회생 중에도 체크카드는 사용 가능한가요?',
-    author: '궁금한회생자',
-    answers: 8,
-    time: '15분 전'
-  },
-  {
-    id: 3,
-    question: '2금융권 대출 시 주의할 점 알려주세요',
-    author: '조심스러운',
-    answers: 15,
-    time: '32분 전'
-  }
-]
-
 const chatGuidelines = [
   '서로를 존중하고 따뜻하게 대해주세요',
   '개인정보는 절대 공유하지 마세요',
@@ -109,6 +85,19 @@ export default function LiveChatPage() {
   // 현재 활성 채팅방 ID (1: 메인, 2: 개인회생, 3: 대출정보, 4: 성공사례)
   const [activeRoomId, setActiveRoomId] = useState<number>(1)
 
+  // URL 파라미터에서 방 번호 확인
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search)
+    const roomParam = urlParams.get('room')
+    if (roomParam) {
+      const roomId = parseInt(roomParam)
+      if (roomId >= 1 && roomId <= 4) {
+        setActiveRoomId(roomId)
+        console.log('🔗 URL에서 방 이동:', roomId)
+      }
+    }
+  }, [])
+
   // 실시간 현황 상태
   const [liveStats, setLiveStats] = useState({
     onlineUsers: 89,
@@ -116,6 +105,82 @@ export default function LiveChatPage() {
     todayQuestions: 47,
     todayAnswers: 128
   })
+
+  // 실제 최근 질문들 상태
+  const [recentQuestions, setRecentQuestions] = useState<any[]>([])
+  const [questionsLoading, setQuestionsLoading] = useState(true)
+
+  // 채팅방 이름 매핑
+  const getRoomName = (roomId: number): string => {
+    const roomNames: { [key: number]: string } = {
+      1: '메인 채팅방',
+      2: '개인회생 모임',
+      3: '대출 정보방',
+      4: '성공사례방'
+    }
+    return roomNames[roomId] || `${roomId}번 방`
+  }
+
+  // 최근 질문들 로드
+  useEffect(() => {
+    const loadRecentQuestions = async () => {
+      try {
+        // 물음표가 포함된 메시지들을 최근 순으로 가져오기
+        const { data: questions, error } = await supabase
+          .from('chat_messages')
+          .select('id, message, user_nickname, room_id, created_at')
+          .ilike('message', '%?%') // 물음표가 포함된 메시지
+          .order('created_at', { ascending: false })
+          .limit(5)
+
+        if (error) {
+          console.error('최근 질문 로드 실패:', error)
+          return
+        }
+
+        // 데이터 가공
+        const processedQuestions = (questions || []).map(q => ({
+          id: q.id,
+          question: q.message.length > 60 ? q.message.substring(0, 60) + '...' : q.message,
+          author: q.user_nickname,
+          roomName: getRoomName(q.room_id),
+          room_id: q.room_id,
+          answers: Math.floor(Math.random() * 10) + 1, // 임시로 랜덤 답변 수
+          time: formatTimeAgo(q.created_at)
+        }))
+
+        setRecentQuestions(processedQuestions)
+        console.log('💡 최근 질문들 로드 완료:', processedQuestions.length, '개')
+
+      } catch (error) {
+        console.error('최근 질문 로드 에러:', error)
+      } finally {
+        setQuestionsLoading(false)
+      }
+    }
+
+    loadRecentQuestions()
+    
+    // 1분마다 질문 목록 업데이트
+    const interval = setInterval(loadRecentQuestions, 60000)
+    return () => clearInterval(interval)
+  }, [])
+
+  // 시간 포맷 함수
+  const formatTimeAgo = (dateString: string): string => {
+    const now = new Date()
+    const messageTime = new Date(dateString)
+    const diffInMinutes = Math.floor((now.getTime() - messageTime.getTime()) / (1000 * 60))
+    
+    if (diffInMinutes < 1) return '방금 전'
+    if (diffInMinutes < 60) return `${diffInMinutes}분 전`
+    
+    const diffInHours = Math.floor(diffInMinutes / 60)
+    if (diffInHours < 24) return `${diffInHours}시간 전`
+    
+    const diffInDays = Math.floor(diffInHours / 24)
+    return `${diffInDays}일 전`
+  }
 
   // 실제 데이터베이스에서 실시간 현황 조회
   const fetchRealStats = async () => {
@@ -380,23 +445,44 @@ export default function LiveChatPage() {
               </div>
               
               <div className="space-y-3">
-                {recentQuestions.map((q) => (
-                  <div
-                    key={q.id}
-                    className="bg-white rounded-xl p-4 shadow-sm border border-gray-100 hover:shadow-md transition-shadow cursor-pointer"
-                  >
-                    <h3 className="font-medium text-gray-900 mb-2 hover:text-indigo-600">
-                      {q.question}
-                    </h3>
-                    <div className="flex items-center justify-between text-sm text-gray-500">
-                      <div className="flex items-center space-x-3">
-                        <span className="text-green-700">💚 {q.author}</span>
-                        <span>{q.answers}개 답변</span>
-                      </div>
-                      <span>{q.time}</span>
-                    </div>
+                {questionsLoading ? (
+                  <div className="text-center py-8">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600 mx-auto"></div>
+                    <p className="text-gray-500 mt-2">최근 질문들을 불러오는 중...</p>
                   </div>
-                ))}
+                ) : recentQuestions.length === 0 ? (
+                  <div className="text-center py-8">
+                    <p className="text-gray-500">아직 질문이 없습니다.</p>
+                    <p className="text-sm text-gray-400 mt-1">첫 번째 질문을 해보세요!</p>
+                  </div>
+                ) : (
+                  recentQuestions.map((q) => (
+                    <div
+                      key={q.id}
+                      className="bg-white rounded-xl p-4 shadow-sm border border-gray-100 hover:shadow-md transition-shadow cursor-pointer group"
+                      onClick={() => {
+                        // 해당 채팅방으로 이동
+                        setActiveRoomId(q.room_id)
+                        // 페이지 상단으로 스크롤
+                        window.scrollTo({ top: 0, behavior: 'smooth' })
+                      }}
+                    >
+                      <h3 className="font-medium text-gray-900 mb-2 group-hover:text-indigo-600 transition-colors">
+                        {q.question}
+                      </h3>
+                      <div className="flex items-center justify-between text-sm text-gray-500">
+                        <div className="flex items-center space-x-3">
+                          <span className="text-green-700">💚 {q.author}</span>
+                          <span className="bg-blue-100 text-blue-700 px-2 py-1 rounded-full text-xs">
+                            {q.roomName}
+                          </span>
+                          <span>{q.answers}개 답변</span>
+                        </div>
+                        <span>{q.time}</span>
+                      </div>
+                    </div>
+                  ))
+                )}
               </div>
             </section>
           </div>
