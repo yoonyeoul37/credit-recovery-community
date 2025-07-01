@@ -13,7 +13,9 @@ import {
   Image,
   ExternalLink,
   Calendar,
-  BarChart3
+  BarChart3,
+  Upload,
+  X
 } from 'lucide-react'
 
 interface Ad {
@@ -29,6 +31,17 @@ interface Ad {
   clickCount: number
   impressions: number
   createdAt: string
+  expiresAt: string
+}
+
+interface AdFormData {
+  title: string
+  description: string
+  imageUrl: string
+  link: string
+  category: string
+  position: 'header' | 'sidebar' | 'content' | 'footer'
+  size: 'small' | 'medium' | 'large' | 'banner'
   expiresAt: string
 }
 
@@ -83,6 +96,16 @@ export default function AdManagement() {
 
   const [showAddModal, setShowAddModal] = useState(false)
   const [editingAd, setEditingAd] = useState<Ad | null>(null)
+  const [formData, setFormData] = useState<AdFormData>({
+    title: '',
+    description: '',
+    imageUrl: '',
+    link: '',
+    category: 'creditStory',
+    position: 'sidebar',
+    size: 'medium',
+    expiresAt: ''
+  })
 
   const toggleAdStatus = (id: number) => {
     setAds(ads.map(ad => 
@@ -94,6 +117,76 @@ export default function AdManagement() {
     if (confirm('정말로 이 광고를 삭제하시겠습니까?')) {
       setAds(ads.filter(ad => ad.id !== id))
     }
+  }
+
+  const handleAddAd = () => {
+    if (!formData.title || !formData.description || !formData.link) {
+      alert('필수 항목을 모두 입력해주세요.')
+      return
+    }
+
+    const newAd: Ad = {
+      id: Math.max(...ads.map(ad => ad.id)) + 1,
+      ...formData,
+      isActive: true,
+      clickCount: 0,
+      impressions: 0,
+      createdAt: new Date().toISOString().split('T')[0]
+    }
+
+    setAds([...ads, newAd])
+    setShowAddModal(false)
+    resetForm()
+    alert('광고가 성공적으로 추가되었습니다!')
+  }
+
+  const handleEditAd = () => {
+    if (!editingAd || !formData.title || !formData.description || !formData.link) {
+      alert('필수 항목을 모두 입력해주세요.')
+      return
+    }
+
+    setAds(ads.map(ad => 
+      ad.id === editingAd.id 
+        ? { ...ad, ...formData }
+        : ad
+    ))
+    setEditingAd(null)
+    resetForm()
+    alert('광고가 성공적으로 수정되었습니다!')
+  }
+
+  const resetForm = () => {
+    setFormData({
+      title: '',
+      description: '',
+      imageUrl: '',
+      link: '',
+      category: 'creditStory',
+      position: 'sidebar',
+      size: 'medium',
+      expiresAt: ''
+    })
+  }
+
+  const openEditModal = (ad: Ad) => {
+    setEditingAd(ad)
+    setFormData({
+      title: ad.title,
+      description: ad.description,
+      imageUrl: ad.imageUrl,
+      link: ad.link,
+      category: ad.category,
+      position: ad.position,
+      size: ad.size,
+      expiresAt: ad.expiresAt
+    })
+  }
+
+  const closeModal = () => {
+    setShowAddModal(false)
+    setEditingAd(null)
+    resetForm()
   }
 
   const getCategoryName = (category: string) => {
@@ -309,7 +402,7 @@ export default function AdManagement() {
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                       <div className="flex items-center space-x-2">
                         <button
-                          onClick={() => setEditingAd(ad)}
+                          onClick={() => openEditModal(ad)}
                           className="text-blue-600 hover:text-blue-900"
                         >
                           <Edit className="w-4 h-4" />
@@ -330,24 +423,174 @@ export default function AdManagement() {
         </div>
       </div>
 
-      {/* 광고 추가/수정 모달은 별도 컴포넌트로 분리 예정 */}
-      {showAddModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-2xl mx-4">
-            <h3 className="text-lg font-semibold mb-4">새 광고 추가</h3>
-            <p className="text-gray-600 mb-4">광고 추가 폼이 여기에 들어갑니다.</p>
-            <div className="flex justify-end space-x-3">
+      {/* 광고 추가/수정 모달 */}
+      {(showAddModal || editingAd) && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            {/* 모달 헤더 */}
+            <div className="flex items-center justify-between p-6 border-b border-gray-200">
+              <h3 className="text-lg font-semibold text-gray-900">
+                {editingAd ? '광고 수정' : '새 광고 추가'}
+              </h3>
               <button
-                onClick={() => setShowAddModal(false)}
+                onClick={closeModal}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+
+            {/* 모달 내용 */}
+            <div className="p-6 space-y-6">
+              {/* 기본 정보 */}
+              <div className="grid grid-cols-1 gap-6">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    광고 제목 *
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.title}
+                    onChange={(e) => setFormData({...formData, title: e.target.value})}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="광고 제목을 입력하세요"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    광고 설명 *
+                  </label>
+                  <textarea
+                    value={formData.description}
+                    onChange={(e) => setFormData({...formData, description: e.target.value})}
+                    rows={3}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="광고 설명을 입력하세요"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    이미지 URL
+                  </label>
+                  <div className="flex space-x-3">
+                    <input
+                      type="url"
+                      value={formData.imageUrl}
+                      onChange={(e) => setFormData({...formData, imageUrl: e.target.value})}
+                      className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      placeholder="https://example.com/image.jpg"
+                    />
+                    <button className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 flex items-center">
+                      <Upload className="w-4 h-4 mr-2" />
+                      업로드
+                    </button>
+                  </div>
+                  {formData.imageUrl && (
+                    <div className="mt-3">
+                      <img 
+                        src={formData.imageUrl} 
+                        alt="미리보기" 
+                        className="w-32 h-20 object-cover rounded-lg border"
+                      />
+                    </div>
+                  )}
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    링크 URL *
+                  </label>
+                  <input
+                    type="url"
+                    value={formData.link}
+                    onChange={(e) => setFormData({...formData, link: e.target.value})}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="https://example.com"
+                  />
+                </div>
+              </div>
+
+              {/* 설정 옵션 */}
+              <div className="grid grid-cols-2 gap-6">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    카테고리
+                  </label>
+                  <select
+                    value={formData.category}
+                    onChange={(e) => setFormData({...formData, category: e.target.value})}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  >
+                    <option value="creditStory">신용이야기</option>
+                    <option value="personalRecovery">개인회생</option>
+                    <option value="corporateRecovery">법인회생</option>
+                    <option value="loanStory">대출이야기</option>
+                    <option value="successStory">성공사례</option>
+                    <option value="liveChat">실시간상담</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    위치
+                  </label>
+                  <select
+                    value={formData.position}
+                    onChange={(e) => setFormData({...formData, position: e.target.value as any})}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  >
+                    <option value="header">헤더</option>
+                    <option value="sidebar">사이드바</option>
+                    <option value="content">컨텐츠 내부</option>
+                    <option value="footer">푸터</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    크기
+                  </label>
+                  <select
+                    value={formData.size}
+                    onChange={(e) => setFormData({...formData, size: e.target.value as any})}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  >
+                    <option value="small">소형</option>
+                    <option value="medium">중형</option>
+                    <option value="large">대형</option>
+                    <option value="banner">배너형</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    만료 날짜
+                  </label>
+                  <input
+                    type="date"
+                    value={formData.expiresAt}
+                    onChange={(e) => setFormData({...formData, expiresAt: e.target.value})}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* 모달 푸터 */}
+            <div className="flex justify-end space-x-3 p-6 border-t border-gray-200">
+              <button
+                onClick={closeModal}
                 className="px-4 py-2 text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50"
               >
                 취소
               </button>
               <button
-                onClick={() => setShowAddModal(false)}
+                onClick={editingAd ? handleEditAd : handleAddAd}
                 className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
               >
-                저장
+                {editingAd ? '수정' : '추가'}
               </button>
             </div>
           </div>
