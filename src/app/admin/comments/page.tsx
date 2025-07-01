@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import AdminAuth from '@/components/AdminAuth'
-import { ArrowLeft, MessageSquare, Trash2, Eye, EyeOff, AlertTriangle, Search, Filter, RefreshCw } from 'lucide-react'
+import { ArrowLeft, MessageSquare, Trash2, Eye, EyeOff, AlertTriangle, Search, Filter, RefreshCw, ExternalLink, Flag } from 'lucide-react'
 
 interface Comment {
   id: number
@@ -79,12 +79,12 @@ export default function CommentManagement() {
     setLoading(false)
   }
 
-  // 로컬 백업 댓글 데이터
+  // 로컬 백업 댓글 데이터 (더 현실적이고 다양한 예시)
   const loadLocalComments = () => {
     const localComments: Comment[] = [
       {
         id: 1,
-        content: '정말 도움이 되는 정보네요! 신용 관리에 큰 도움이 되었습니다.',
+        content: '정말 도움이 되는 정보네요! 신용 관리에 큰 도움이 되었습니다. 저도 비슷한 방법으로 시도해보겠습니다.',
         author_nickname: '감사인123',
         post_id: 1,
         post_title: '신용점수 200점 올린 후기 공유합니다',
@@ -96,7 +96,7 @@ export default function CommentManagement() {
       },
       {
         id: 2,
-        content: '저도 비슷한 상황이었는데 희망이 생기네요. 용기 얻고 갑니다!',
+        content: '저도 비슷한 상황이었는데 희망이 생기네요. 용기 얻고 갑니다! 질문이 있는데 개인회생 신청할 때 가장 어려웠던 부분이 뭐였나요?',
         author_nickname: '희망찾기',
         post_id: 2,
         post_title: '개인회생 인가 결정 받았습니다!',
@@ -108,7 +108,7 @@ export default function CommentManagement() {
       },
       {
         id: 3,
-        content: '급전필요하신분 연락주세요! 빠른처리 가능합니다.',
+        content: '🚨 급전필요하신분 연락주세요! 빠른처리 가능합니다. 무담보 무보증 즉시대출 가능! 카톡: money123',
         author_nickname: '스팸러',
         post_id: 3,
         post_title: '부채 5천만원에서 완전 탈출까지의 여정',
@@ -120,7 +120,7 @@ export default function CommentManagement() {
       },
       {
         id: 4,
-        content: '@감사인123 저도 같은 방법으로 시도해볼게요!',
+        content: '@감사인123 저도 같은 방법으로 시도해볼게요! 혹시 어느 은행에서 하셨나요?',
         author_nickname: '따라해보기',
         post_id: 1,
         parent_id: 1,
@@ -131,7 +131,7 @@ export default function CommentManagement() {
       },
       {
         id: 5,
-        content: '정말 감동적인 이야기네요. 포기하지 않고 끝까지 해낸 점이 존경스럽습니다.',
+        content: '정말 감동적인 이야기네요. 포기하지 않고 끝까지 해낸 점이 존경스럽습니다. 저도 힘내서 해보겠습니다.',
         author_nickname: '응원단장',
         post_id: 2,
         parent_id: null,
@@ -139,6 +139,39 @@ export default function CommentManagement() {
         is_deleted: false,
         created_at: '2024-01-15T17:30:00Z',
         updated_at: '2024-01-15T17:30:00Z'
+      },
+      {
+        id: 6,
+        content: '개인정보 털렸네요 ㅋㅋ 010-1234-5678 이 번호로 전화하세요',
+        author_nickname: '악성유저',
+        post_id: 1,
+        parent_id: null,
+        like_count: -2,
+        is_deleted: true,
+        created_at: '2024-01-15T18:00:00Z',
+        updated_at: '2024-01-15T18:30:00Z'
+      },
+      {
+        id: 7,
+        content: '저는 3년 전에 개인회생했는데, 지금은 신용점수가 700점까지 올랐어요. 포기하지 마세요!',
+        author_nickname: '성공한선배',
+        post_id: 2,
+        parent_id: 2,
+        like_count: 25,
+        is_deleted: false,
+        created_at: '2024-01-15T19:15:00Z',
+        updated_at: '2024-01-15T19:15:00Z'
+      },
+      {
+        id: 8,
+        content: '변호사 추천해드려요! 수임료 저렴하고 친절합니다. 연락처는 쪽지로 드릴게요.',
+        author_nickname: '광고맨',
+        post_id: 2,
+        parent_id: null,
+        like_count: 1,
+        is_deleted: true,
+        created_at: '2024-01-15T20:00:00Z',
+        updated_at: '2024-01-15T20:30:00Z'
       }
     ]
     
@@ -285,6 +318,40 @@ export default function CommentManagement() {
     }
   }
 
+  // 게시글로 이동하는 함수
+  const goToPost = (postId: number) => {
+    // 카테고리별 URL 매핑 (실제 구현에서는 post 데이터에서 가져와야 함)
+    const categoryMap: { [key: number]: string } = {
+      1: 'credit-story',
+      2: 'personal-recovery', 
+      3: 'success-story'
+    }
+    
+    const category = categoryMap[postId] || 'credit-story'
+    const url = `/${category}/${postId}`
+    window.open(url, '_blank')
+  }
+
+  // 위험 댓글 감지 (스팸, 광고, 개인정보 등)
+  const isDangerousComment = (content: string): { isDangerous: boolean; reason: string } => {
+    const dangerousPatterns = [
+      { pattern: /급전|즉시대출|무담보|무보증/, reason: '불법 대출 광고' },
+      { pattern: /010-\d{4}-\d{4}|01[016789]-\d{3,4}-\d{4}/, reason: '전화번호 노출' },
+      { pattern: /카톡|카카오톡|텔레그램|라인/, reason: '개인 연락처 유도' },
+      { pattern: /변호사 추천|법무사 추천|수임료/, reason: '업체 광고' },
+      { pattern: /🚨|‼️|💰|💵/, reason: '스팸성 이모지' },
+      { pattern: /개인정보|털렸|ㅋㅋ.*전화/, reason: '개인정보 관련 악성' }
+    ]
+
+    for (const { pattern, reason } of dangerousPatterns) {
+      if (pattern.test(content)) {
+        return { isDangerous: true, reason }
+      }
+    }
+
+    return { isDangerous: false, reason: '' }
+  }
+
   return (
     <AdminAuth>
       <div className="min-h-screen bg-gray-50">
@@ -374,41 +441,68 @@ export default function CommentManagement() {
               </div>
             ) : (
               <div className="divide-y divide-gray-200">
-                {currentComments.map(comment => (
-                  <div key={comment.id} className={`p-6 ${comment.is_deleted ? 'bg-red-50' : 'bg-white'}`}>
-                    <div className="flex justify-between items-start space-x-4">
-                      <div className="flex-1 min-w-0">
-                        {/* 댓글 내용 */}
-                        <div className={`mb-3 ${comment.is_deleted ? 'text-gray-500 line-through' : 'text-gray-900'}`}>
-                          {comment.parent_id && (
-                            <span className="inline-block bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-md mr-2 mb-1">
-                              답글
+                {currentComments.map(comment => {
+                  const dangerCheck = isDangerousComment(comment.content)
+                  
+                  return (
+                    <div key={comment.id} className={`p-6 ${
+                      comment.is_deleted ? 'bg-red-50 border-l-4 border-red-400' : 
+                      dangerCheck.isDangerous ? 'bg-yellow-50 border-l-4 border-yellow-400' : 
+                      'bg-white'
+                    }`}>
+                      <div className="flex justify-between items-start space-x-4">
+                        <div className="flex-1 min-w-0">
+                          {/* 상태 및 경고 표시 */}
+                          <div className="flex items-center gap-2 mb-2">
+                            {comment.parent_id && (
+                              <span className="inline-block bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-md">
+                                답글
+                              </span>
+                            )}
+                            {dangerCheck.isDangerous && !comment.is_deleted && (
+                              <span className="inline-flex items-center bg-yellow-100 text-yellow-800 text-xs px-2 py-1 rounded-md">
+                                <Flag className="w-3 h-3 mr-1" />
+                                {dangerCheck.reason}
+                              </span>
+                            )}
+                            {comment.is_deleted && (
+                              <span className="inline-block bg-red-100 text-red-800 text-xs px-2 py-1 rounded-md">
+                                삭제됨
+                              </span>
+                            )}
+                          </div>
+
+                          {/* 댓글 내용 */}
+                          <div className={`mb-3 ${comment.is_deleted ? 'text-gray-500 line-through' : 'text-gray-900'}`}>
+                            <p className="text-sm leading-relaxed break-words">{comment.content}</p>
+                          </div>
+                          
+                          {/* 메타 정보 */}
+                          <div className="flex flex-wrap items-center gap-4 text-xs text-gray-500">
+                            <span className="flex items-center">
+                              <strong className="text-gray-700">{comment.author_nickname}</strong>
                             </span>
-                          )}
-                          <p className="text-sm leading-relaxed">{comment.content}</p>
+                            <button
+                              onClick={() => goToPost(comment.post_id)}
+                              className="flex items-center text-blue-600 hover:text-blue-800 transition-colors"
+                              title="원본 게시글 보기"
+                            >
+                              <ExternalLink className="w-3 h-3 mr-1" />
+                              게시글 #{comment.post_id}
+                            </button>
+                            <span className="flex items-center">
+                              👍 {comment.like_count}
+                            </span>
+                            <span>{formatDate(comment.created_at)}</span>
+                            {comment.updated_at !== comment.created_at && (
+                              <span className="text-blue-600">(수정됨)</span>
+                            )}
+                          </div>
                         </div>
                         
-                        {/* 메타 정보 */}
-                        <div className="flex flex-wrap items-center gap-4 text-xs text-gray-500">
-                          <span className="flex items-center">
-                            <strong className="text-gray-700">{comment.author_nickname}</strong>
-                          </span>
-                          <span>게시글 ID: {comment.post_id}</span>
-                          <span>좋아요: {comment.like_count}</span>
-                          <span>{formatDate(comment.created_at)}</span>
-                          {comment.updated_at !== comment.created_at && (
-                            <span className="text-blue-600">(수정됨)</span>
-                          )}
-                        </div>
-                      </div>
-                      
-                      {/* 관리 버튼들 */}
-                      <div className="flex items-center space-x-2">
-                        {comment.is_deleted ? (
-                          <>
-                            <span className="px-2 py-1 bg-red-100 text-red-800 text-xs rounded-full">
-                              삭제됨
-                            </span>
+                        {/* 관리 버튼들 */}
+                        <div className="flex items-center space-x-2">
+                          {comment.is_deleted ? (
                             <button
                               onClick={() => handleRestoreComment(comment.id)}
                               className="flex items-center space-x-1 px-3 py-1.5 bg-green-600 text-white text-xs rounded-md hover:bg-green-700 transition-colors"
@@ -417,26 +511,32 @@ export default function CommentManagement() {
                               <Eye className="w-3 h-3" />
                               <span>복원</span>
                             </button>
-                          </>
-                        ) : (
-                          <>
-                            <span className="px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full">
-                              활성
-                            </span>
-                            <button
-                              onClick={() => handleDeleteComment(comment.id)}
-                              className="flex items-center space-x-1 px-3 py-1.5 bg-red-600 text-white text-xs rounded-md hover:bg-red-700 transition-colors"
-                              title="삭제"
-                            >
-                              <Trash2 className="w-3 h-3" />
-                              <span>삭제</span>
-                            </button>
-                          </>
-                        )}
+                          ) : (
+                            <>
+                              {dangerCheck.isDangerous && (
+                                <span className="px-2 py-1 bg-yellow-100 text-yellow-800 text-xs rounded-full">
+                                  ⚠️ 주의
+                                </span>
+                              )}
+                              <button
+                                onClick={() => handleDeleteComment(comment.id)}
+                                className={`flex items-center space-x-1 px-3 py-1.5 text-white text-xs rounded-md transition-colors ${
+                                  dangerCheck.isDangerous 
+                                    ? 'bg-red-600 hover:bg-red-700' 
+                                    : 'bg-gray-600 hover:bg-gray-700'
+                                }`}
+                                title="삭제"
+                              >
+                                <Trash2 className="w-3 h-3" />
+                                <span>삭제</span>
+                              </button>
+                            </>
+                          )}
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))}
+                  )
+                })}
               </div>
             )}
 
