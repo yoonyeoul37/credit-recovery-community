@@ -15,6 +15,7 @@ interface Comment {
   user_nickname: string
   created_at: string
   likes_count: number
+  like_count?: number  // API 호환성을 위해 추가
   replies: Comment[]
   is_liked?: boolean
 }
@@ -27,7 +28,9 @@ interface Post {
   created_at: string
   updated_at: string
   like_count: number
+  comment_count?: number   // API 호환성을 위해 추가
   comments_count: number
+  view_count?: number      // API 호환성을 위해 추가
   views_count: number
   category: string
   tags: string[]
@@ -152,6 +155,7 @@ const PostDetail = ({ postId, category, className = '' }: PostDetailProps) => {
             user_nickname: comment.author_nickname,
             created_at: comment.created_at,
             likes_count: comment.like_count || 0,
+            like_count: comment.like_count || 0,
             replies: supabaseComments
               .filter(reply => reply.parent_id === comment.id)
               .map(reply => ({
@@ -160,6 +164,7 @@ const PostDetail = ({ postId, category, className = '' }: PostDetailProps) => {
                 user_nickname: reply.author_nickname,
                 created_at: reply.created_at,
                 likes_count: reply.like_count || 0,
+                like_count: reply.like_count || 0,
                 replies: []
               }))
           }))
@@ -233,7 +238,9 @@ const PostDetail = ({ postId, category, className = '' }: PostDetailProps) => {
             created_at: savedPost.created_at,
             updated_at: savedPost.created_at,
             like_count: savedPost.like_count || 0,
+            comment_count: savedPost.comment_count || 0,
             comments_count: savedPost.comments_count || 0,
+            view_count: savedPost.view_count || 0,
             views_count: savedPost.views_count || 0,
             category,
             tags: savedPost.tags || [],
@@ -278,7 +285,9 @@ const PostDetail = ({ postId, category, className = '' }: PostDetailProps) => {
           created_at: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
           updated_at: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
           like_count: 24,
+          comment_count: 8,
           comments_count: 8,
+          view_count: 156,
           views_count: 156,
           category,
           tags: ['신용점수', '신용회복', '성공사례', '팁'],
@@ -300,12 +309,28 @@ const PostDetail = ({ postId, category, className = '' }: PostDetailProps) => {
     loadPost();
   }, [postId, category]);
 
-  // 게시글이 로드된 후 북마크 상태 확인
+  // 게시글이 로드된 후 북마크 상태 확인 및 조회수 증가
   useEffect(() => {
     if (post) {
       checkBookmarkStatus()
+      
+      // 조회수 증가 (한 번만 실행되도록 중복 방지)
+      const viewedPosts = JSON.parse(localStorage.getItem('viewed-posts') || '[]')
+      const sessionKey = `viewed-${post.id}-${Date.now().toString().slice(0, -6)}` // 시간 기반 세션
+      
+      if (!viewedPosts.includes(sessionKey)) {
+        incrementViewCount(post.id.toString())
+        viewedPosts.push(sessionKey)
+        
+        // 오래된 세션 키 정리 (10개만 유지)
+        if (viewedPosts.length > 10) {
+          viewedPosts.splice(0, viewedPosts.length - 10)
+        }
+        
+        localStorage.setItem('viewed-posts', JSON.stringify(viewedPosts))
+      }
     }
-  }, [post])
+  }, [post?.id]) // post.id가 변경될 때만 실행
 
   // 메뉴 드롭다운 외부 클릭시 닫기
   useEffect(() => {
@@ -604,6 +629,7 @@ const PostDetail = ({ postId, category, className = '' }: PostDetailProps) => {
       user_nickname: commentData.author_nickname,
       created_at: new Date().toISOString(),
       likes_count: 0,
+      like_count: 0,
       replies: []
     }
 
@@ -614,10 +640,15 @@ const PostDetail = ({ postId, category, className = '' }: PostDetailProps) => {
     localStorage.setItem(`comments-${postId}`, JSON.stringify(updatedComments))
     
     if (post) {
-      setPost({ ...post, comment_count: post.comments_count + 1 })
+      const currentCommentCount = getCommentCount(post);
+      setPost({ 
+        ...post, 
+        comment_count: currentCommentCount + 1,
+        comments_count: currentCommentCount + 1
+      })
     }
     
-    console.log('📱 로컬 댓글 저장 완료')
+    console.log('�� 로컬 댓글 저장 완료')
   }
 
   const handleReplySubmit = async (parentId: number) => {
@@ -694,6 +725,7 @@ const PostDetail = ({ postId, category, className = '' }: PostDetailProps) => {
       user_nickname: replyData.author_nickname,
       created_at: new Date().toISOString(),
       likes_count: 0,
+      like_count: 0,
       replies: []
     }
 
@@ -709,7 +741,12 @@ const PostDetail = ({ postId, category, className = '' }: PostDetailProps) => {
     localStorage.setItem(`comments-${postId}`, JSON.stringify(updatedComments))
     
     if (post) {
-      setPost({ ...post, comment_count: post.comment_count + 1 })
+      const currentCommentCount = getCommentCount(post);
+      setPost({ 
+        ...post, 
+        comment_count: currentCommentCount + 1,
+        comments_count: currentCommentCount + 1
+      })
     }
     
     console.log('📱 로컬 대댓글 저장 완료')
@@ -770,13 +807,21 @@ const PostDetail = ({ postId, category, className = '' }: PostDetailProps) => {
   const updateCommentLikeLocally = (commentId: number) => {
     const updatedComments = comments.map(comment => {
       if (comment.id === commentId) {
-        return { ...comment, likes_count: comment.likes_count + 1 }
+        return { 
+          ...comment, 
+          likes_count: getCommentLikeCount(comment) + 1,
+          like_count: getCommentLikeCount(comment) + 1 
+        }
       }
       // 대댓글 체크
       if (comment.replies.length > 0) {
         const updatedReplies = comment.replies.map(reply => 
           reply.id === commentId 
-            ? { ...reply, likes_count: reply.likes_count + 1 }
+            ? { 
+                ...reply, 
+                likes_count: getCommentLikeCount(reply) + 1,
+                like_count: getCommentLikeCount(reply) + 1 
+              }
             : reply
         )
         return { ...comment, replies: updatedReplies }
@@ -1119,6 +1164,97 @@ const PostDetail = ({ postId, category, className = '' }: PostDetailProps) => {
     localStorage.setItem('liked-comments', JSON.stringify(arr));
   };
 
+  // 데이터 필드명 통일을 위한 헬퍼 함수들
+  const getCommentCount = (post: Post) => {
+    return post.comment_count || post.comments_count || 0;
+  }
+
+  const getViewCount = (post: Post) => {
+    return post.view_count || post.views_count || 0;
+  }
+
+  const getCommentLikeCount = (comment: Comment) => {
+    return comment.like_count || comment.likes_count || 0;
+  }
+
+  // 조회수 증가 함수
+  const incrementViewCount = async (postId: string) => {
+    try {
+      console.log('👀 조회수 증가 시작:', postId)
+      
+      // Supabase에 조회수 증가 시도
+      const { supabase } = await import('@/lib/supabase')
+      
+      const { data: currentPost, error: fetchError } = await supabase
+        .from('posts')
+        .select('view_count')
+        .eq('id', postId)
+        .single()
+      
+      if (!fetchError && currentPost) {
+        const newViewCount = (currentPost.view_count || 0) + 1
+        
+        const { error: updateError } = await supabase
+          .from('posts')
+          .update({ view_count: newViewCount })
+          .eq('id', postId)
+        
+        if (!updateError) {
+          console.log('✅ Supabase 조회수 업데이트 성공:', newViewCount)
+          
+          // 현재 post state 업데이트
+          if (post) {
+            setPost({ 
+              ...post, 
+              view_count: newViewCount,
+              views_count: newViewCount 
+            })
+          }
+          return
+        }
+      }
+      
+      console.warn('⚠️ Supabase 조회수 업데이트 실패 - 로컬 처리')
+      incrementViewCountLocally(postId)
+      
+    } catch (error) {
+      console.warn('⚠️ 조회수 증가 완전 실패 - 로컬 처리')
+      incrementViewCountLocally(postId)
+    }
+  }
+
+  // 로컬 조회수 증가
+  const incrementViewCountLocally = (postId: string) => {
+    try {
+      // 로컬스토리지의 게시글 목록 업데이트
+      const savedPosts = JSON.parse(localStorage.getItem('community-posts') || '[]')
+      const updatedPosts = savedPosts.map((p: any) => 
+        p.id.toString() === postId 
+          ? { 
+              ...p, 
+              view_count: (p.view_count || 0) + 1,
+              views_count: (p.views_count || 0) + 1
+            }
+          : p
+      )
+      localStorage.setItem('community-posts', JSON.stringify(updatedPosts))
+      
+      // 현재 post state 업데이트
+      if (post) {
+        const currentViewCount = getViewCount(post)
+        setPost({ 
+          ...post, 
+          view_count: currentViewCount + 1,
+          views_count: currentViewCount + 1
+        })
+      }
+      
+      console.log('📱 로컬 조회수 증가 완료')
+    } catch (error) {
+      console.error('❌ 로컬 조회수 증가 실패:', error)
+    }
+  }
+
   if (loading) {
     return (
       <div className={`max-w-4xl mx-auto ${className}`}>
@@ -1189,11 +1325,11 @@ const PostDetail = ({ postId, category, className = '' }: PostDetailProps) => {
             <div className="flex items-center space-x-4">
               <div className="flex items-center space-x-1">
                 <Eye className="w-4 h-4" />
-                <span>{post.views_count}</span>
+                <span>{getViewCount(post)}</span>
               </div>
               <div className="flex items-center space-x-1">
                 <MessageCircle className="w-4 h-4" />
-                <span>{safeCount(post.comment_count, 0)}개</span>
+                <span>{safeCount(getCommentCount(post), 0)}개</span>
               </div>
             </div>
           </div>
@@ -1343,7 +1479,7 @@ const PostDetail = ({ postId, category, className = '' }: PostDetailProps) => {
         <div className="p-6 border-b border-gray-100">
           <h3 className="text-lg font-semibold text-gray-900 flex items-center">
             <MessageCircle className="w-5 h-5 mr-2" />
-            댓글 {safeCount(post.comment_count, 0)}개
+            댓글 {safeCount(getCommentCount(post), 0)}개
           </h3>
         </div>
 
@@ -1419,7 +1555,7 @@ const PostDetail = ({ postId, category, className = '' }: PostDetailProps) => {
                       className={`flex items-center space-x-1 text-gray-500 hover:text-blue-600 transition-colors ${getLikedComments().includes(comment.id) ? 'text-blue-600 opacity-60 cursor-not-allowed' : ''}`}
                     >
                       <ThumbsUp className="w-3 h-3" />
-                      <span>{safeCount(comment.likes_count, 0)}</span>
+                      <span>{safeCount(getCommentLikeCount(comment), 0)}</span>
                     </button>
                     <button 
                       onClick={() => setReplyingTo(replyingTo === comment.id ? null : comment.id)}
@@ -1490,7 +1626,7 @@ const PostDetail = ({ postId, category, className = '' }: PostDetailProps) => {
                       className={`flex items-center space-x-1 text-xs text-gray-500 hover:text-blue-600 transition-colors ${getLikedComments().includes(reply.id) ? 'text-blue-600 opacity-60 cursor-not-allowed' : ''}`}
                     >
                       <ThumbsUp className="w-3 h-3" />
-                      <span>{safeCount(reply.likes_count, 0)}</span>
+                      <span>{safeCount(getCommentLikeCount(reply), 0)}</span>
                     </button>
                     <button 
                       onClick={() => handleCommentEdit(reply.id)}

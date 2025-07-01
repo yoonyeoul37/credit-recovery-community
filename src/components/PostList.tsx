@@ -47,6 +47,54 @@ const PostList = ({ category, className = '', showSearch = true }: PostListProps
     hasImages: null
   })
 
+  const postsPerPage = 10
+
+  // 시간 포맷 함수 (한국시간 기준으로 수정)
+  const formatTimeAgo = (dateString: string) => {
+    const now = new Date()
+    const date = new Date(dateString)
+    
+    // 한국시간 기준으로 계산
+    const kstNow = new Date(now.getTime() + (9 * 60 * 60 * 1000))
+    const kstDate = new Date(date.getTime() + (9 * 60 * 60 * 1000))
+    
+    const diff = kstNow.getTime() - kstDate.getTime()
+    
+    const minutes = Math.floor(diff / (1000 * 60))
+    const hours = Math.floor(diff / (1000 * 60 * 60))
+    const days = Math.floor(diff / (1000 * 60 * 60 * 24))
+    
+    if (minutes < 1) {
+      return '방금 전'
+    } else if (minutes < 60) {
+      return `${minutes}분 전`
+    } else if (hours < 24) {
+      return `${hours}시간 전`
+    } else if (days < 30) {
+      return `${days}일 전`
+    } else {
+      // 한국시간으로 표시
+      return kstDate.toLocaleDateString('ko-KR', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      })
+    }
+  }
+
+  // 데이터 필드명 통일을 위한 헬퍼 함수들
+  const getCommentCount = (post: Post) => {
+    return post.comment_count || 0;
+  }
+
+  const getViewCount = (post: Post) => {
+    return post.view_count || 0;
+  }
+
+  const getLikeCount = (post: Post) => {
+    return post.like_count || 0;
+  }
+
   useEffect(() => {
     const loadPosts = async () => {
       setLoading(true)
@@ -272,16 +320,67 @@ const PostList = ({ category, className = '', showSearch = true }: PostListProps
     result.sort((a, b) => {
       switch (searchFilters.sortBy) {
         case 'popular':
-          return (b.like_count || 0) - (a.like_count || 0)
+          return getLikeCount(b) - getLikeCount(a)
         case 'views':
-          return (b.view_count || 0) - (a.view_count || 0)
+          return getViewCount(b) - getViewCount(a)
         case 'comments':
-          return (b.comment_count || 0) - (a.comment_count || 0)
+          return getCommentCount(b) - getCommentCount(a)
         case 'latest':
         default:
-          return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+          const timeA = new Date(a.created_at).getTime()
+          const timeB = new Date(b.created_at).getTime()
+          
+          // 디버깅: 정렬 정보 출력
+          if (result.length <= 10) { // 게시글이 적을 때만 로그 출력
+            const kstDateA = new Date(new Date(a.created_at).getTime() + (9 * 60 * 60 * 1000))
+            const kstDateB = new Date(new Date(b.created_at).getTime() + (9 * 60 * 60 * 1000))
+            
+            console.log('📊 정렬 디버깅:', {
+              sortBy: searchFilters.sortBy,
+              postA: { 
+                id: a.id, 
+                title: a.title.substring(0, 20), 
+                created_at: a.created_at, 
+                timeA,
+                kstDateA: kstDateA.toLocaleString('ko-KR')
+              },
+              postB: { 
+                id: b.id, 
+                title: b.title.substring(0, 20), 
+                created_at: b.created_at, 
+                timeB,
+                kstDateB: kstDateB.toLocaleString('ko-KR')
+              },
+              comparison: timeB - timeA,
+              isValidA: !isNaN(timeA),
+              isValidB: !isNaN(timeB)
+            })
+          }
+          
+          // NaN 체크 추가
+          if (isNaN(timeA) || isNaN(timeB)) {
+            console.warn('⚠️ 날짜 파싱 오류:', { a: a.created_at, b: b.created_at })
+            return 0 // 같은 순서 유지
+          }
+          
+          return timeB - timeA
       }
     })
+
+    // 정렬 후 상위 5개 게시글 정보 출력
+    if (result.length > 0) {
+      console.log('🔝 정렬 후 상위 5개 게시글:', result.slice(0, 5).map(post => {
+        const kstDate = new Date(new Date(post.created_at).getTime() + (9 * 60 * 60 * 1000))
+        return {
+          id: post.id,
+          title: post.title.substring(0, 30),
+          created_at: post.created_at,
+          kstDate: kstDate.toLocaleString('ko-KR'),
+          timestamp: new Date(post.created_at).getTime(),
+          timeAgo: formatTimeAgo(post.created_at)
+        }
+      }))
+    }
 
     return result
   }, [allPosts, searchFilters])
@@ -289,26 +388,6 @@ const PostList = ({ category, className = '', showSearch = true }: PostListProps
   const handleSearch = (filters: SearchFilters) => {
     setSearchFilters(filters)
     setCurrentPage(1) // 검색 시 첫 페이지로
-  }
-
-  const formatTimeAgo = (dateString: string) => {
-    const now = new Date()
-    const date = new Date(dateString)
-    const diff = now.getTime() - date.getTime()
-    
-    const minutes = Math.floor(diff / (1000 * 60))
-    const hours = Math.floor(diff / (1000 * 60 * 60))
-    const days = Math.floor(diff / (1000 * 60 * 60 * 24))
-    
-    if (minutes < 60) {
-      return `${minutes}분 전`
-    } else if (hours < 24) {
-      return `${hours}시간 전`
-    } else if (days < 30) {
-      return `${days}일 전`
-    } else {
-      return new Date(date).toLocaleDateString()
-    }
   }
 
   const getCategoryName = (cat: string) => {
@@ -323,10 +402,9 @@ const PostList = ({ category, className = '', showSearch = true }: PostListProps
   }
 
   // 페이징 계산
-  const itemsPerPage = 10
-  const totalPages = Math.ceil(filteredPosts.length / itemsPerPage)
-  const startIndex = (currentPage - 1) * itemsPerPage
-  const endIndex = startIndex + itemsPerPage
+  const totalPages = Math.ceil(filteredPosts.length / postsPerPage)
+  const startIndex = (currentPage - 1) * postsPerPage
+  const endIndex = startIndex + postsPerPage
   const currentPosts = filteredPosts.slice(startIndex, endIndex)
 
   const handlePageChange = (page: number) => {
@@ -448,15 +526,15 @@ const PostList = ({ category, className = '', showSearch = true }: PostListProps
                 <div className="flex items-center space-x-6">
                   <div className="flex items-center space-x-1">
                     <Eye className="w-5 h-5" />
-                    <span>{post.view_count || 0}</span>
+                    <span>{getViewCount(post)}</span>
                   </div>
                   <div className="flex items-center space-x-1">
                     <Heart className="w-5 h-5" />
-                    <span>{post.like_count || 0}</span>
+                    <span>{getLikeCount(post)}</span>
                   </div>
                   <div className="flex items-center space-x-1">
                     <MessageCircle className="w-5 h-5" />
-                    <span>{post.comment_count || 0}</span>
+                    <span>{getCommentCount(post)}</span>
                   </div>
                 </div>
               </div>

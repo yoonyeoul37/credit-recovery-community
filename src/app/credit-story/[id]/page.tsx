@@ -4,11 +4,11 @@ import PostDetail from '@/components/PostDetail'
 import Advertisement from '@/components/Advertisement'
 
 interface PageProps {
-  params: { id: string }
+  params: Promise<{ id: string }>
 }
 
-export function generateMetadata({ params }: PageProps): Metadata {
-  const { id } = params
+export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+  const { id } = await params
   // 실제로는 DB에서 게시글 정보를 가져와서 메타데이터를 생성
   return {
     title: `게시글 #${id} - 신용이야기`,
@@ -66,8 +66,8 @@ function PostDetailSkeleton() {
   )
 }
 
-export default function CreditStoryPostPage({ params }: PageProps) {
-  const { id } = params
+export default async function CreditStoryPostPage({ params }: PageProps) {
+  const { id } = await params
   
   return (
     <div className="min-h-screen bg-gray-50">
