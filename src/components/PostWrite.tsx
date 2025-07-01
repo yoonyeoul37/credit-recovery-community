@@ -722,7 +722,6 @@ const PostWrite = ({ className = '' }: PostWriteProps) => {
                 ? 'border-red-300 focus:ring-red-500' 
                 : 'border-gray-200 focus:ring-blue-500'
             }`}
-            maxLength={100}
           />
           {errors.title && (
             <div className="flex items-center space-x-1 mt-2 text-red-600 text-sm">
@@ -731,7 +730,7 @@ const PostWrite = ({ className = '' }: PostWriteProps) => {
             </div>
           )}
           <div className="text-right text-xs text-gray-500 mt-1">
-            {title.length}/100
+            {title.length}자
           </div>
         </div>
 
@@ -751,7 +750,6 @@ const PostWrite = ({ className = '' }: PostWriteProps) => {
                 ? 'border-red-300 focus:ring-red-500' 
                 : 'border-gray-200 focus:ring-blue-500'
             }`}
-            maxLength={3000}
           />
           {errors.content && (
             <div className="flex items-center space-x-1 mt-2 text-red-600 text-sm">
@@ -760,7 +758,7 @@ const PostWrite = ({ className = '' }: PostWriteProps) => {
             </div>
           )}
           <div className="text-right text-xs text-gray-500 mt-1">
-            {content.length}/3000
+            {content.length}자
           </div>
         </div>
 
