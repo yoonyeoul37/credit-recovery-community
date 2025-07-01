@@ -429,10 +429,13 @@ export default function HomePage() {
                         <div className="flex items-center space-x-4 text-sm text-gray-500">
                           <span className="font-medium text-green-700">💚 {question.user_nickname}</span>
                         </div>
-                        <div className="flex items-center text-sm text-blue-600">
-                          <MessageCircle className="w-4 h-4 mr-1" />
-                          <span>답변하러 가기</span>
-                        </div>
+                        <Link
+                          href={`/live-chat?room=${question.room_id}`}
+                          className="flex items-center text-sm text-blue-600 hover:text-blue-700 transition-colors cursor-pointer group"
+                        >
+                          <MessageCircle className="w-4 h-4 mr-1 group-hover:scale-110 transition-transform" />
+                          <span className="group-hover:underline">답변하러 가기</span>
+                        </Link>
                       </div>
                     </div>
                   </div>
