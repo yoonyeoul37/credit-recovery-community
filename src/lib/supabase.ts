@@ -127,6 +127,9 @@ export interface ChatMessage {
   message: string
   message_type: 'text' | 'emoji' | 'system'
   is_deleted: boolean
+  deleted_at?: string
+  deleted_reason?: string
+  deleted_by?: string
   created_at: string
   // 관계 데이터
   room?: ChatRoom

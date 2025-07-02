@@ -1,9 +1,11 @@
 'use client'
 
 import { useState, useRef, useEffect, useCallback } from 'react'
-import { Send, Users, LogIn, LogOut, AlertCircle, Loader2, Edit3, Check, X } from 'lucide-react'
+import { Send, Users, LogIn, LogOut, AlertCircle, Loader2, Edit3, Check, X, Flag } from 'lucide-react'
 import { useChat } from '@/hooks/useChat'
 import { ChatMessage } from '@/lib/supabase'
+import { formatChatTime } from '@/lib/utils'
+import { supabase } from '@/lib/supabase'
 
 interface ChatRoomProps {
   roomId: number
@@ -14,6 +16,10 @@ const ChatRoom = ({ roomId, className = '' }: ChatRoomProps) => {
   const [inputMessage, setInputMessage] = useState('')
   const [isEditingNickname, setIsEditingNickname] = useState(false)
   const [nicknameInput, setNicknameInput] = useState('')
+  const [reportingMessageId, setReportingMessageId] = useState<number | null>(null)
+  const [reportReason, setReportReason] = useState('')
+  const [reportDetails, setReportDetails] = useState('')
+  const [isSubmittingReport, setIsSubmittingReport] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
   const nicknameInputRef = useRef<HTMLInputElement>(null)
   const messagesContainerRef = useRef<HTMLDivElement>(null)
@@ -26,11 +32,13 @@ const ChatRoom = ({ roomId, className = '' }: ChatRoomProps) => {
     error,
     isConnected,
     userNickname,
+    userHash,
     sendMessage,
     joinRoom,
     leaveRoom,
     changeNickname,
-    participantCount
+    participantCount,
+    onlineUsers
   } = useChat(roomId)
 
   // 사용자가 맨 아래에 있는지 확인하는 함수
@@ -129,10 +137,61 @@ const ChatRoom = ({ roomId, className = '' }: ChatRoomProps) => {
     }
   }
 
+  // 신고 기능 핸들러들
+  const handleReportMessage = (messageId: number) => {
+    setReportingMessageId(messageId)
+    setReportReason('')
+    setReportDetails('')
+  }
+
+  const handleCancelReport = () => {
+    setReportingMessageId(null)
+    setReportReason('')
+    setReportDetails('')
+  }
+
+  const handleSubmitReport = async () => {
+    if (!reportingMessageId || !reportReason.trim()) {
+      alert('신고 사유를 선택해주세요.')
+      return
+    }
+
+    setIsSubmittingReport(true)
+    
+    try {
+      const { error } = await supabase
+        .from('chat_reports')
+        .insert({
+          message_id: reportingMessageId,
+          reporter_hash: userHash,
+          reporter_nickname: userNickname,
+          reason: reportReason,
+          details: reportDetails.trim() || null,
+          status: 'pending'
+        })
+
+      if (error) {
+        console.error('신고 제출 실패:', error)
+        alert('신고 제출에 실패했습니다. 다시 시도해주세요.')
+        return
+      }
+
+      alert('신고가 접수되었습니다. 관리자가 검토 후 조치하겠습니다.')
+      handleCancelReport()
+      
+    } catch (err) {
+      console.error('신고 제출 오류:', err)
+      alert('신고 제출 중 오류가 발생했습니다.')
+    } finally {
+      setIsSubmittingReport(false)
+    }
+  }
+
   // 메시지 렌더링
   const renderMessage = (message: ChatMessage) => {
     const isSystem = message.message_type === 'system'
     const isMyMessage = message.user_ip_hash === userNickname // 임시로 닉네임으로 비교
+    const isDeleted = message.is_deleted || false
     
     if (isSystem) {
       return (
@@ -147,31 +206,48 @@ const ChatRoom = ({ roomId, className = '' }: ChatRoomProps) => {
     return (
       <div
         key={message.id}
-        className={`flex ${isMyMessage ? 'justify-end' : 'justify-start'} mb-4`}
+        className={`flex ${isMyMessage ? 'justify-end' : 'justify-start'} mb-4 group`}
       >
-        <div className={`max-w-xs lg:max-w-md ${isMyMessage ? 'order-2' : ''}`}>
+        <div className={`max-w-xs lg:max-w-md ${isMyMessage ? 'order-2' : ''} relative`}>
           {!isMyMessage && (
-            <div className="text-xs text-gray-600 mb-1 px-2">
-              💚 {message.user_nickname}
+            <div className="text-xs text-gray-600 mb-1 px-2 flex items-center justify-between">
+              <span>💚 {isDeleted ? '삭제됨' : message.user_nickname}</span>
+              {/* 신고 버튼 - 다른 사용자 메시지에만 표시 */}
+              {!isDeleted && (
+                <button
+                  onClick={() => handleReportMessage(message.id)}
+                  className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-red-50 rounded text-red-500 hover:text-red-700"
+                  title="메시지 신고"
+                >
+                  <Flag className="w-3 h-3" />
+                </button>
+              )}
             </div>
           )}
           <div
             className={`rounded-2xl px-4 py-2 ${
-              isMyMessage
+              isDeleted
+                ? 'bg-gray-100 border border-gray-200 text-gray-500'
+                : isMyMessage
                 ? 'bg-blue-500 text-white'
                 : 'bg-white border border-gray-200 text-gray-900'
             }`}
           >
-            <p className="text-sm break-words">{message.message}</p>
+            {isDeleted ? (
+              <p className="text-sm italic">🚫 삭제된 메시지입니다</p>
+            ) : (
+              <p className="text-sm break-words">{message.message}</p>
+            )}
             <div
               className={`text-xs mt-1 ${
-                isMyMessage ? 'text-blue-100' : 'text-gray-500'
+                isDeleted
+                  ? 'text-gray-400'
+                  : isMyMessage 
+                  ? 'text-blue-100' 
+                  : 'text-gray-500'
               }`}
             >
-              {new Date(message.created_at).toLocaleTimeString('ko-KR', {
-                hour: '2-digit',
-                minute: '2-digit'
-              })}
+              {formatChatTime(message.created_at)}
             </div>
           </div>
         </div>
@@ -261,7 +337,7 @@ const ChatRoom = ({ roomId, className = '' }: ChatRoomProps) => {
             </div>
             <div className="flex items-center space-x-2 text-sm text-gray-600">
               <Users className="w-4 h-4" />
-              <span>{participantCount}명 참여중</span>
+              <span className="font-medium text-green-600">{participantCount}명 실시간 접속중</span>
             </div>
             {isConnected ? (
               <button
@@ -349,24 +425,110 @@ const ChatRoom = ({ roomId, className = '' }: ChatRoomProps) => {
         )}
       </div>
 
-      {/* 참여자 목록 (간단히) */}
-      {isConnected && participants.length > 0 && (
+      {/* 실시간 접속자 목록 */}
+      {participantCount > 0 && (
         <div className="border-t border-gray-100 p-4 bg-gray-50">
-          <div className="text-sm text-gray-600 mb-2">현재 참여자</div>
+          <div className="text-sm text-gray-600 mb-2 flex items-center">
+            <div className="w-2 h-2 bg-green-500 rounded-full mr-2 animate-pulse"></div>
+            실시간 접속자 ({participantCount}명)
+          </div>
           <div className="flex flex-wrap gap-2">
-            {participants.slice(0, 5).map((participant) => (
+            {Object.entries(onlineUsers).slice(0, 8).map(([userHash, userInfo]) => (
               <span
-                key={participant.id}
-                className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full"
+                key={userHash}
+                className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full flex items-center"
+                title={`접속 시간: ${new Date(userInfo.joinedAt).toLocaleTimeString()}`}
               >
-                💚 {participant.user_nickname}
+                <div className="w-1.5 h-1.5 bg-green-500 rounded-full mr-1"></div>
+                💚 {userInfo.nickname}
               </span>
             ))}
-            {participants.length > 5 && (
-              <span className="text-xs text-gray-500">
-                +{participants.length - 5}명 더
+            {participantCount > 8 && (
+              <span className="text-xs text-gray-500 px-2 py-1">
+                +{participantCount - 8}명 더
               </span>
             )}
+          </div>
+          {participantCount === 0 && (
+            <div className="text-xs text-gray-500 italic">
+              현재 접속한 사용자가 없습니다
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* 신고 모달 */}
+      {reportingMessageId && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+              <Flag className="w-5 h-5 mr-2 text-red-500" />
+              메시지 신고하기
+            </h3>
+            
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                신고 사유를 선택해주세요 <span className="text-red-500">*</span>
+              </label>
+              <select
+                value={reportReason}
+                onChange={(e) => setReportReason(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
+                required
+              >
+                <option value="">사유를 선택하세요</option>
+                <option value="욕설/비방">욕설 또는 비방</option>
+                <option value="스팸">스팸 메시지</option>
+                <option value="부적절한 내용">부적절한 내용</option>
+                <option value="개인정보 노출">개인정보 노출</option>
+                <option value="상업적 홍보">상업적 홍보</option>
+                <option value="기타">기타</option>
+              </select>
+            </div>
+
+            <div className="mb-6">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                상세 내용 (선택사항)
+              </label>
+              <textarea
+                value={reportDetails}
+                onChange={(e) => setReportDetails(e.target.value)}
+                placeholder="신고 사유에 대한 추가 설명을 입력해주세요..."
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
+                rows={3}
+                maxLength={500}
+              />
+              <div className="text-xs text-gray-500 mt-1">
+                {reportDetails.length}/500자
+              </div>
+            </div>
+
+            <div className="flex space-x-3">
+              <button
+                onClick={handleCancelReport}
+                className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 transition-colors"
+                disabled={isSubmittingReport}
+              >
+                취소
+              </button>
+              <button
+                onClick={handleSubmitReport}
+                disabled={!reportReason.trim() || isSubmittingReport}
+                className="flex-1 px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center"
+              >
+                {isSubmittingReport ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  '신고하기'
+                )}
+              </button>
+            </div>
+
+            <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-md">
+              <p className="text-xs text-yellow-800">
+                💡 허위 신고 시 제재를 받을 수 있습니다. 신중하게 신고해주세요.
+              </p>
+            </div>
           </div>
         </div>
       )}

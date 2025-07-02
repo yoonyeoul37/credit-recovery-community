@@ -185,15 +185,35 @@ export default function LiveChatPage() {
   // 실제 데이터베이스에서 실시간 현황 조회
   const fetchRealStats = async () => {
     try {
-      // 온라인 사용자 수 (최근 5분 이내 채팅 메시지를 보낸 고유 사용자)
+      // 실시간 접속자 수는 각 채팅방의 presence를 통해 계산
+      // 현재는 메인 채팅방(1번)과 개인회생 채팅방(2번)이 활성화
+      let totalOnlineUsers = 0
+      
+      // 각 활성 채팅방의 presence 상태 확인
+      for (const roomId of [1, 2]) {
+        try {
+          const channel = supabase.channel(`chat_room_${roomId}`)
+          const presenceState = channel.presenceState()
+          const roomUsers = Object.keys(presenceState).length
+          totalOnlineUsers += roomUsers
+          console.log(`📊 ${roomId}번 방 실시간 접속자: ${roomUsers}명`)
+        } catch (err) {
+          console.warn(`${roomId}번 방 presence 확인 실패:`, err)
+        }
+      }
+
+      // 중복 사용자 제거를 위해 최근 활동 기반으로도 계산
       const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString()
       const { data: onlineData } = await supabase
         .from('chat_messages')
         .select('user_hash')
         .gte('created_at', fiveMinutesAgo)
 
-      // 고유 사용자 수 계산
+      // 고유 사용자 수 계산 (fallback)
       const uniqueUsers = onlineData ? [...new Set(onlineData.map(msg => msg.user_hash))].length : 0
+      
+      // 더 높은 값을 사용 (실시간 presence가 더 정확하지만 fallback 필요)
+      const finalOnlineUsers = Math.max(totalOnlineUsers, uniqueUsers, 1)
 
       // 활성 채팅방 수 (메인 + 개인회생 = 2개)
       const activeRooms = 2
@@ -211,14 +231,14 @@ export default function LiveChatPage() {
         .select('id')
 
       console.log('📊 실시간 현황 업데이트:', {
-        온라인사용자: uniqueUsers,
+        실시간접속자: finalOnlineUsers,
         활성채팅방: activeRooms,
         오늘메시지: todayMessagesData?.length || 0,
         전체메시지: totalMessagesData?.length || 0
       })
 
       setLiveStats({
-        onlineUsers: uniqueUsers,
+        onlineUsers: finalOnlineUsers, // 실시간 presence 기반
         activeRooms: activeRooms,
         todayQuestions: todayMessagesData?.length || 0,
         todayAnswers: totalMessagesData?.length || 0
@@ -523,8 +543,9 @@ export default function LiveChatPage() {
               </h3>
               <div className="space-y-3">
                 <div className="flex justify-between items-center">
-                  <span className="text-gray-600">활성 사용자 (5분 이내)</span>
-                  <span className="font-semibold text-green-600 transition-all duration-300">
+                  <span className="text-gray-600">실시간 접속자</span>
+                  <span className="font-semibold text-green-600 transition-all duration-300 flex items-center">
+                    <div className="w-2 h-2 bg-green-500 rounded-full mr-1 animate-pulse"></div>
                     {liveStats.onlineUsers}명
                   </span>
                 </div>

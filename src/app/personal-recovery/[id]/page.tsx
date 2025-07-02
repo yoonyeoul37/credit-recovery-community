@@ -1,7 +1,6 @@
 import { Metadata } from 'next'
 import { Suspense } from 'react'
 import PostDetail from '@/components/PostDetail'
-import Advertisement from '@/components/Advertisement'
 
 interface PageProps {
   params: Promise<{ id: string }>
@@ -15,7 +14,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   }
 }
 
-// 로딩 스켈레톤 (재사용)
+// 로딩 스켈레톤
 function PostDetailSkeleton() {
   return (
     <div className="max-w-4xl mx-auto px-4 py-8">
@@ -44,17 +43,6 @@ function PostDetailSkeleton() {
             </div>
           </div>
         </div>
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100">
-          <div className="p-6 border-b border-gray-100">
-            <div className="h-6 bg-gray-200 rounded w-32"></div>
-          </div>
-          <div className="p-6">
-            <div className="space-y-4">
-              <div className="h-20 bg-gray-200 rounded"></div>
-              <div className="h-16 bg-gray-200 rounded"></div>
-            </div>
-          </div>
-        </div>
       </div>
     </div>
   )
@@ -68,7 +56,6 @@ export default async function PersonalRecoveryPostPage({ params }: PageProps) {
       <div className="flex justify-center px-4 py-8">
         <div className="w-full max-w-7xl">
           <div className="flex justify-center">
-            {/* 메인 콘텐츠 */}
             <main className="w-full max-w-4xl">
               <Suspense fallback={<PostDetailSkeleton />}>
                 <PostDetail 

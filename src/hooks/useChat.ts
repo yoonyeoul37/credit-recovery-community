@@ -48,6 +48,7 @@ export const useChat = (roomId: number) => {
   const [isConnected, setIsConnected] = useState(false)
   const [realtimeChannel, setRealtimeChannel] = useState<RealtimeChannel | null>(null)
   const [participantCount, setParticipantCount] = useState(0)
+  const [onlineUsers, setOnlineUsers] = useState<{[key: string]: {nickname: string, joinedAt: string}}>({})
 
   // 채팅방 로드
   const loadRoom = useCallback(async () => {
@@ -535,17 +536,36 @@ export const useChat = (roomId: number) => {
     return true
   }, [])
 
+  // 실제 참여자 수 업데이트
+  const updateParticipantCount = useCallback((presenceState: any) => {
+    const users = Object.keys(presenceState)
+    setParticipantCount(users.length)
+    
+    // 온라인 사용자 정보 업데이트
+    const userInfo: {[key: string]: {nickname: string, joinedAt: string}} = {}
+    users.forEach(userHash => {
+      const presence = presenceState[userHash]
+      if (presence && presence.length > 0) {
+        userInfo[userHash] = {
+          nickname: presence[0].nickname || '익명',
+          joinedAt: presence[0].joinedAt || new Date().toISOString()
+        }
+      }
+    })
+    setOnlineUsers(userInfo)
+    
+    console.log(`👥 실시간 참여자 수: ${users.length}명`, userInfo)
+  }, [])
+
   // 실시간 구독 설정
   const setupRealtime = useCallback(async () => {
-    if (!isConnected) return
-
     try {
       if (isDemoMode) {
         console.log('🏠 로컬 데모 모드 - 실시간 구독 건너뛰기')
         return
       }
 
-      console.log('🔔 실시간 구독 설정 시작...')
+      console.log('🔔 실시간 구독 설정 시작 (강제 실행)...', { roomId })
       
       // 기존 채널 정리 (현재 상태에서 직접 참조)
       setRealtimeChannel(prevChannel => {
@@ -555,9 +575,15 @@ export const useChat = (roomId: number) => {
         return null
       })
 
-      // 새 채널 생성
+      // 새 채널 생성 (presence 추적 포함)
       const channel = supabase
-        .channel(`chat_room_${roomId}`)
+        .channel(`chat_room_${roomId}`, {
+          config: {
+            presence: {
+              key: userHash,
+            },
+          },
+        })
         .on(
           'postgres_changes',
           {
@@ -578,6 +604,21 @@ export const useChat = (roomId: number) => {
             })
           }
         )
+        .on('presence', { event: 'sync' }, () => {
+          const presenceState = channel.presenceState()
+          console.log('👥 참여자 동기화:', presenceState)
+          updateParticipantCount(presenceState)
+        })
+        .on('presence', { event: 'join' }, ({ key, newPresences }) => {
+          console.log('👋 새 참여자 입장:', key, newPresences)
+          const presenceState = channel.presenceState()
+          updateParticipantCount(presenceState)
+        })
+        .on('presence', { event: 'leave' }, ({ key, leftPresences }) => {
+          console.log('👋 참여자 퇴장:', key, leftPresences)
+          const presenceState = channel.presenceState()
+          updateParticipantCount(presenceState)
+        })
         .on(
           'postgres_changes',
           {
@@ -621,8 +662,27 @@ export const useChat = (roomId: number) => {
             )
           }
         )
-        .subscribe((status) => {
+        .subscribe(async (status) => {
           console.log('🔔 실시간 구독 상태:', status)
+          if (status === 'SUBSCRIBED') {
+            console.log('✅ 실시간 구독 성공! 이제 메시지가 실시간으로 수신됩니다.')
+            
+            // 구독 성공 시 사용자 presence 추적 시작
+            const presencePayload = {
+              userHash: userHash,
+              nickname: userNickname,
+              joinedAt: new Date().toISOString(),
+              roomId: roomId
+            }
+            
+            await channel.track(presencePayload)
+            console.log('👥 사용자 presence 추적 시작:', presencePayload)
+            
+          } else if (status === 'CHANNEL_ERROR') {
+            console.error('❌ 실시간 구독 오류 발생')
+          } else if (status === 'TIMED_OUT') {
+            console.error('⏰ 실시간 구독 타임아웃')
+          }
         })
 
       setRealtimeChannel(channel)
@@ -631,13 +691,21 @@ export const useChat = (roomId: number) => {
     } catch (err) {
       console.error('❌ 실시간 구독 설정 실패:', err)
     }
-  }, [roomId]) // isConnected, realtimeChannel 의존성 제거
+  }, [roomId, updateParticipantCount, userHash, userNickname]) // 필요한 의존성 추가
 
   // 실시간 구독 해제
   const cleanupRealtime = useCallback(async () => {
     setRealtimeChannel(prevChannel => {
       if (prevChannel) {
         console.log('🔕 실시간 구독 해제...')
+        
+        // presence 추적 중단
+        prevChannel.untrack().then(() => {
+          console.log('👥 사용자 presence 추적 중단')
+        }).catch(err => {
+          console.warn('⚠️ presence 추적 중단 실패:', err)
+        })
+        
         supabase.removeChannel(prevChannel)
         console.log('✅ 실시간 구독 해제 완료')
       }
@@ -647,14 +715,14 @@ export const useChat = (roomId: number) => {
 
   // 실시간 구독 설정/해제 Effect
   useEffect(() => {
-    if (isConnected) {
-      setupRealtime()
-    }
+    // isConnected 조건 제거 - 무조건 실시간 구독 시작
+    console.log('🔄 실시간 구독 강제 시작 (isConnected 무시)')
+    setupRealtime()
     
     return () => {
       cleanupRealtime()
     }
-  }, [isConnected]) // setupRealtime, cleanupRealtime 의존성 제거
+  }, [setupRealtime, cleanupRealtime]) // setupRealtime 변경 시 재시작
 
   // 초기 설정
   useEffect(() => {
@@ -668,6 +736,8 @@ export const useChat = (roomId: number) => {
           loadParticipants()
         ])
         
+        // 채팅 설정 완료 후 실시간 구독 활성화
+        setIsConnected(true)
         setLoading(false)
         console.log('✅ 실제 채팅 설정 완료!')
       } catch (err) {
@@ -678,65 +748,14 @@ export const useChat = (roomId: number) => {
     }
 
     setupChat()
-  }, [roomId]) // loadRoom, loadMessages, loadParticipants 의존성 제거
+  }, [roomId, loadRoom, loadMessages, loadParticipants]) // 필요한 의존성 추가
 
   // 컴포넌트 언마운트 시 정리
   useEffect(() => {
     return () => {
       cleanupRealtime()
     }
-  }, []) // cleanupRealtime 의존성 제거 (언마운트 시에만 실행)
-
-  // 실시간 참여자 수 계산
-  const updateParticipantCount = useCallback(async () => {
-    try {
-      if (isDemoMode) {
-        // 데모 모드에서는 랜덤한 참여자 수 표시
-        setParticipantCount(Math.floor(Math.random() * 30) + 15)
-        return
-      }
-
-      // 최근 5분 이내에 채팅한 활성 사용자 수 계산
-      const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString()
-      
-      const { data, error } = await supabase
-        .from('chat_messages')
-        .select('user_ip_hash')
-        .eq('room_id', roomId)
-        .gte('created_at', fiveMinutesAgo)
-      
-      if (error) {
-        console.error('참여자 수 계산 실패:', error)
-        // 에러 시 현실적인 랜덤 값 표시
-        setParticipantCount(Math.floor(Math.random() * 25) + 10)
-        return
-      }
-
-      // 고유한 사용자 수 계산
-      const uniqueUsers = new Set(data?.map(msg => msg.user_ip_hash) || [])
-      const activeCount = uniqueUsers.size
-      
-      // 최소 1명은 표시 (현재 사용자)
-      setParticipantCount(Math.max(activeCount, 1))
-      
-      console.log(`📊 ${roomId}번 방 실시간 참여자 수:`, activeCount)
-      
-    } catch (err) {
-      console.error('참여자 수 업데이트 실패:', err)
-      setParticipantCount(Math.floor(Math.random() * 20) + 8)
-    }
-  }, [roomId])
-
-  // 실시간 참여자 수 업데이트 (10초마다)
-  useEffect(() => {
-    updateParticipantCount() // 초기 로드
-    
-    const interval = setInterval(() => {
-      updateParticipantCount()
-    }, 10000) // 10초마다 업데이트
-    
-    return () => clearInterval(interval)
-  }, [updateParticipantCount])
+  }, [cleanupRealtime]) // cleanupRealtime 의존성 추가
 
   return {
     // 상태
@@ -747,6 +766,7 @@ export const useChat = (roomId: number) => {
     error,
     isConnected,
     userNickname,
+    userHash,
     
     // 액션 - 오직 실제 채팅만!
     sendMessage,
@@ -755,6 +775,7 @@ export const useChat = (roomId: number) => {
     changeNickname,
     
     // 정보
-    participantCount // 이제 실시간으로 계산됨
+    participantCount, // 이제 실시간으로 계산됨
+    onlineUsers
   }
 } 

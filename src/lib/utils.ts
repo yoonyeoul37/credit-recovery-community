@@ -5,6 +5,45 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
+// UTC 시간을 한국시간으로 변환하는 유틸리티 함수
+export function formatKoreanTime(utcDateString: string, options?: Intl.DateTimeFormatOptions): string {
+  const date = new Date(utcDateString)
+  
+  // 명시적으로 9시간 추가 (UTC+9)
+  const koreaTime = new Date(date.getTime() + (9 * 60 * 60 * 1000))
+  
+  return koreaTime.toLocaleString('ko-KR', options)
+}
+
+// 채팅 메시지용 시간 포맷 (시:분만 표시)
+export function formatChatTime(utcDateString: string): string {
+  return formatKoreanTime(utcDateString, {
+    hour: '2-digit',
+    minute: '2-digit'
+  })
+}
+
+// 관리자 페이지용 시간 포맷 (날짜 + 시간)
+export function formatAdminTime(utcDateString: string): string {
+  return formatKoreanTime(utcDateString, {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  })
+}
+
+// 메인 페이지용 시간 포맷 (월/일 시:분)
+export function formatMainPageTime(utcDateString: string): string {
+  return formatKoreanTime(utcDateString, {
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  })
+}
+
 // 날짜 포맷팅 함수
 export function formatDate(date: string | Date): string {
   const now = new Date()

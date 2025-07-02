@@ -503,6 +503,11 @@ const PostWrite = ({ className = '' }: PostWriteProps) => {
       // imagePreviews에서 base64가 아닌 publicUrl만 필터링
       const uploadedImageUrls = imagePreviews.filter(url => url.startsWith('http'))
       
+      // 한국시간(KST) 생성
+      const now = new Date()
+      const kstDate = new Date(now.getTime() + (9 * 60 * 60 * 1000))
+      const kstISOString = kstDate.toISOString()
+      
       const postData = {
         category_id: categoryMapping[category] || 1,
         title: title.trim(),
@@ -517,7 +522,9 @@ const PostWrite = ({ className = '' }: PostWriteProps) => {
         comment_count: 0,
         is_hot: false,
         is_notice: false,
-        is_deleted: false
+        is_deleted: false,
+        created_at: kstISOString,
+        updated_at: kstISOString
       }
       
       console.log('📤 게시글 저장 시도:', {
@@ -546,9 +553,8 @@ const PostWrite = ({ className = '' }: PostWriteProps) => {
         })
         console.log('💾 로컬 백업 저장으로 전환합니다...')
         
-        // 로컬 백업 저장
-        const now = new Date().toISOString();
-        const localData = { ...postData, id: Date.now(), category, created_at: now, updated_at: now };
+        // 로컬 백업 저장 (이미 한국시간이 적용된 postData 사용)
+        const localData = { ...postData, id: Date.now(), category };
         const existingPosts = JSON.parse(localStorage.getItem('community-posts') || '[]')
         existingPosts.unshift(localData)
         localStorage.setItem('community-posts', JSON.stringify(existingPosts))
