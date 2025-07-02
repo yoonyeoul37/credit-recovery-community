@@ -10,9 +10,9 @@ import { formatAdminTime } from '@/lib/utils'
 interface ChatReport {
   id: number
   message_id: number
-  reporter_hash: string
+  reporter_ip_hash: string
   reporter_nickname: string
-  reason: string
+  report_reason: string
   details: string | null
   status: 'pending' | 'reviewed' | 'resolved' | 'dismissed'
   created_at: string
@@ -108,7 +108,7 @@ export default function ReportsPage() {
             .update({
               is_deleted: true,
               deleted_by: 'admin',
-              deleted_reason: `신고 처리: ${report.reason}`,
+              deleted_reason: `신고 처리: ${report.report_reason}`,
               deleted_at: new Date().toISOString()
             })
             .eq('id', report.message_id)
@@ -133,7 +133,7 @@ export default function ReportsPage() {
     const matchesStatus = filterStatus === 'all' || report.status === filterStatus
     const matchesSearch = searchTerm === '' || 
       report.reporter_nickname.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      report.reason.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      report.report_reason.toLowerCase().includes(searchTerm.toLowerCase()) ||
       (report.message?.message || '').toLowerCase().includes(searchTerm.toLowerCase())
     
     return matchesStatus && matchesSearch

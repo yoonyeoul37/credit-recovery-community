@@ -163,9 +163,9 @@ const ChatRoom = ({ roomId, className = '' }: ChatRoomProps) => {
         .from('chat_reports')
         .insert({
           message_id: reportingMessageId,
-          reporter_hash: userHash,
+          reporter_ip_hash: userHash,
           reporter_nickname: userNickname,
-          reason: reportReason,
+          report_reason: reportReason,
           details: reportDetails.trim() || null,
           status: 'pending'
         })

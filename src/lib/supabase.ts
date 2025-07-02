@@ -28,6 +28,14 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     autoRefreshToken: true,
     storageKey: 'credit-community-auth' // 커스텀 스토리지 키
   },
+  realtime: {
+    params: {
+      eventsPerSecond: 10, // 초당 이벤트 수 제한
+    },
+    heartbeatIntervalMs: 30000, // 30초마다 heartbeat
+    reconnectAfterMs: (tries: number) => Math.min(tries * 1000, 30000), // 재연결 간격 (최대 30초)
+    timeout: 20000, // 20초 타임아웃
+  },
   global: {
     headers: {
       'X-Client-Info': 'credit-community-web'
