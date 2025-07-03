@@ -4,8 +4,8 @@ import { useState, useEffect } from 'react'
 import PostList from '@/components/PostList'
 import PostWrite from '@/components/PostWrite'
 import { HelpCircle, Plus, Search, MessageSquare, Users, CheckCircle } from 'lucide-react'
-import PersonalRecoveryCalculator from '@/components/PersonalRecoveryCalculator'
-import LoanCalculator from '@/components/LoanCalculator'
+import PersonalRecoveryCalculator from '../../components/PersonalRecoveryCalculator'
+import LoanCalculator from '../../components/LoanCalculator'
 
 interface Post {
   id: number
