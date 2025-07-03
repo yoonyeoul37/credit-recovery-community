@@ -127,12 +127,14 @@ export default function LoanInfoPostPage({ params }: { params: Promise<{ id: str
                   <p className="text-sm text-gray-600 mb-4">
                     {ad.description}
                   </p>
-                  <button 
-                    className={`${ad.buttonColor} text-white px-4 py-2 rounded-lg transition-colors text-sm w-full`}
-                    onClick={() => window.open(ad.url, '_blank')}
+                  <a 
+                    href={ad.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={`${ad.buttonColor} text-white px-4 py-2 rounded-lg transition-colors text-sm w-full inline-block text-center`}
                   >
                     {ad.cta}
-                  </button>
+                  </a>
                 </div>
               </div>
             ))}

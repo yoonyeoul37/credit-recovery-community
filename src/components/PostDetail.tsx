@@ -234,7 +234,7 @@ const PostDetail = ({ postId, category, className = '' }: PostDetailProps) => {
             id: savedPost.id,
             title: savedPost.title,
             content: savedPost.content,
-            user_nickname: savedPost.user_nickname || savedPost.author_nickname,
+            user_nickname: savedPost.user_nickname || savedPost.author_nickname || savedPost.author,
             created_at: savedPost.created_at,
             updated_at: savedPost.created_at,
             like_count: savedPost.like_count || 0,
@@ -360,13 +360,19 @@ const PostDetail = ({ postId, category, className = '' }: PostDetailProps) => {
     }
   }, [postId])
 
-  // 게시글 로드 시 is_liked 상태 localStorage 반영
+  // 게시글 로드 시 is_liked 상태 localStorage 반영 (초기 로드 시에만)
   useEffect(() => {
-    if (post) {
+    if (post && post.id) {
       const likedPosts = JSON.parse(localStorage.getItem('liked-posts') || '[]');
-      setPost(p => p ? { ...p, is_liked: likedPosts.includes(p.id) } : p);
+      const isLiked = likedPosts.includes(post.id);
+      console.log('💖 좋아요 상태 확인:', { postId: post.id, isLiked, likedPosts });
+      
+      // 현재 상태와 다를 때만 업데이트
+      if (post.is_liked !== isLiked) {
+        setPost(p => p ? { ...p, is_liked: isLiked } : p);
+      }
     }
-  }, [postId, post?.id]);
+  }, [postId]); // postId가 변경될 때만 실행
 
   const getCategoryInfo = (cat: string) => {
     const categories: { [key: string]: { name: string; color: string; icon: string } } = {
@@ -400,13 +406,25 @@ const PostDetail = ({ postId, category, className = '' }: PostDetailProps) => {
     if (!post) return;
     const likedPosts = JSON.parse(localStorage.getItem('liked-posts') || '[]');
     const hasLiked = likedPosts.includes(post.id);
-    const { supabase } = await import('@/lib/supabase');
     const newLikesCount = hasLiked ? post.like_count - 1 : post.like_count + 1;
-    const { error } = await supabase
-      .from('posts')
-      .update({ like_count: newLikesCount })
-      .eq('id', post.id);
-    if (!error) {
+
+    try {
+      // Supabase에 좋아요 업데이트 시도
+      const { supabase } = await import('@/lib/supabase');
+      const { error } = await supabase
+        .from('posts')
+        .update({ like_count: newLikesCount })
+        .eq('id', post.id);
+      
+      if (error) {
+        console.warn('⚠️ Supabase 좋아요 업데이트 실패 - 로컬 처리')
+        handleLikeLocally(hasLiked, newLikesCount)
+        return
+      }
+
+      console.log('✅ Supabase 좋아요 업데이트 성공')
+      
+      // 로컬 상태 즉시 업데이트
       let updatedLikedPosts;
       if (hasLiked) {
         updatedLikedPosts = likedPosts.filter((id: number) => id !== post.id);
@@ -414,15 +432,54 @@ const PostDetail = ({ postId, category, className = '' }: PostDetailProps) => {
         updatedLikedPosts = [...likedPosts, post.id];
       }
       localStorage.setItem('liked-posts', JSON.stringify(updatedLikedPosts));
-      const { data: updatedPost } = await supabase
-        .from('posts')
-        .select('*')
-        .eq('id', post.id)
-        .single();
-      if (updatedPost) {
-        setPost({ ...updatedPost, is_liked: !hasLiked });
-      }
+      
+      setPost({ 
+        ...post, 
+        like_count: newLikesCount,
+        is_liked: !hasLiked 
+      });
+      
+    } catch (error) {
+      console.warn('⚠️ 좋아요 처리 완전 실패 - 로컬 처리')
+      handleLikeLocally(hasLiked, newLikesCount)
     }
+  };
+
+  // 로컬 좋아요 처리
+  const handleLikeLocally = (hasLiked: boolean, newLikesCount: number) => {
+    const likedPosts = JSON.parse(localStorage.getItem('liked-posts') || '[]');
+    
+    let updatedLikedPosts;
+    if (hasLiked) {
+      updatedLikedPosts = likedPosts.filter((id: number) => id !== post?.id);
+    } else {
+      updatedLikedPosts = [...likedPosts, post?.id];
+    }
+    localStorage.setItem('liked-posts', JSON.stringify(updatedLikedPosts));
+    
+    // 로컬 스토리지의 게시글 목록도 업데이트
+    try {
+      const savedPosts = JSON.parse(localStorage.getItem('community-posts') || '[]')
+      const updatedPosts = savedPosts.map((p: any) => 
+        p.id.toString() === post?.id.toString() 
+          ? { ...p, like_count: newLikesCount }
+          : p
+      )
+      localStorage.setItem('community-posts', JSON.stringify(updatedPosts))
+    } catch (error) {
+      console.warn('로컬 스토리지 게시글 목록 업데이트 실패:', error)
+    }
+    
+    // 현재 상태 업데이트
+    if (post) {
+      setPost({ 
+        ...post, 
+        like_count: newLikesCount,
+        is_liked: !hasLiked 
+      });
+    }
+    
+    console.log('📱 로컬 좋아요 처리 완료')
   };
 
   // 북마크 상태 확인
@@ -584,24 +641,25 @@ const PostDetail = ({ postId, category, className = '' }: PostDetailProps) => {
         saveCommentLocally(commentData)
       } else {
         console.log('✅ Supabase 댓글 저장 성공:', data)
-        // insert 결과를 state에 직접 추가하지 않고, DB에서 최신 목록을 반드시 다시 불러옴
+        
+        // 댓글 카운트 증가
+        if (post && post.id) {
+          await supabase
+            .from('posts')
+            .update({ comment_count: (post.comment_count || 0) + 1 })
+            .eq('id', post.id)
+          
+          // 로컬 상태 즉시 업데이트
+          setPost({ 
+            ...post, 
+            comment_count: (post.comment_count || 0) + 1,
+            comments_count: (post.comment_count || 0) + 1
+          })
+        }
+        
+        // 댓글 목록 새로고침
         const safeId = safeParsePostId(postId)
         if (safeId !== null) await loadComments(safeId)
-        setTimeout(() => {
-          const safeId = safeParsePostId(postId)
-          if (safeId !== null) loadComments(safeId)
-        }, 200);
-        // 게시글 정보 새로고침 (댓글 수 포함)
-        if (post && post.id) {
-          const { data: updatedPost, error: postError } = await supabase
-            .from('posts')
-            .select('*')
-            .eq('id', post.id)
-            .single()
-          if (!postError && updatedPost) {
-            setPost({ ...updatedPost, comment_count: updatedPost.comment_count })
-          }
-        }
       }
       
     } catch (error) {
@@ -640,15 +698,29 @@ const PostDetail = ({ postId, category, className = '' }: PostDetailProps) => {
     localStorage.setItem(`comments-${postId}`, JSON.stringify(updatedComments))
     
     if (post) {
-      const currentCommentCount = getCommentCount(post);
-      setPost({ 
+      const newCommentCount = updatedComments.length + updatedComments.reduce((acc, comment) => acc + comment.replies.length, 0);
+      const updatedPost = { 
         ...post, 
-        comment_count: currentCommentCount + 1,
-        comments_count: currentCommentCount + 1
-      })
+        comment_count: newCommentCount,
+        comments_count: newCommentCount
+      }
+      setPost(updatedPost)
+      
+      // 로컬 스토리지의 게시글 목록도 업데이트
+      try {
+        const savedPosts = JSON.parse(localStorage.getItem('community-posts') || '[]')
+        const updatedPosts = savedPosts.map((p: any) => 
+          p.id.toString() === postId 
+            ? { ...p, comment_count: newCommentCount, comments_count: newCommentCount }
+            : p
+        )
+        localStorage.setItem('community-posts', JSON.stringify(updatedPosts))
+      } catch (error) {
+        console.warn('로컬 스토리지 게시글 목록 업데이트 실패:', error)
+      }
     }
     
-    console.log('�� 로컬 댓글 저장 완료')
+    console.log('📱 로컬 댓글 저장 완료')
   }
 
   const handleReplySubmit = async (parentId: number) => {
@@ -694,8 +766,16 @@ const PostDetail = ({ postId, category, className = '' }: PostDetailProps) => {
             .from('posts')
             .update({ comment_count: (post.comment_count || 0) + 1 })
             .eq('id', post.id)
+          
+          // 로컬 상태 즉시 업데이트
+          setPost({ 
+            ...post, 
+            comment_count: (post.comment_count || 0) + 1,
+            comments_count: (post.comment_count || 0) + 1
+          })
         }
-        // 성공 시 댓글 목록 새로고침
+        
+        // 댓글 목록 새로고침
         const safeId = safeParsePostId(postId)
         if (safeId !== null) await loadComments(safeId)
       }
@@ -741,12 +821,26 @@ const PostDetail = ({ postId, category, className = '' }: PostDetailProps) => {
     localStorage.setItem(`comments-${postId}`, JSON.stringify(updatedComments))
     
     if (post) {
-      const currentCommentCount = getCommentCount(post);
-      setPost({ 
+      const newCommentCount = updatedComments.length + updatedComments.reduce((acc, comment) => acc + comment.replies.length, 0);
+      const updatedPost = { 
         ...post, 
-        comment_count: currentCommentCount + 1,
-        comments_count: currentCommentCount + 1
-      })
+        comment_count: newCommentCount,
+        comments_count: newCommentCount
+      }
+      setPost(updatedPost)
+      
+      // 로컬 스토리지의 게시글 목록도 업데이트
+      try {
+        const savedPosts = JSON.parse(localStorage.getItem('community-posts') || '[]')
+        const updatedPosts = savedPosts.map((p: any) => 
+          p.id.toString() === postId 
+            ? { ...p, comment_count: newCommentCount, comments_count: newCommentCount }
+            : p
+        )
+        localStorage.setItem('community-posts', JSON.stringify(updatedPosts))
+      } catch (error) {
+        console.warn('로컬 스토리지 게시글 목록 업데이트 실패:', error)
+      }
     }
     
     console.log('📱 로컬 대댓글 저장 완료')
@@ -890,8 +984,16 @@ const PostDetail = ({ postId, category, className = '' }: PostDetailProps) => {
             .from('posts')
             .update({ comment_count: (post.comment_count || 1) - 1 })
             .eq('id', post.id)
+          
+          // 로컬 상태 즉시 업데이트
+          setPost({ 
+            ...post, 
+            comment_count: (post.comment_count || 1) - 1,
+            comments_count: (post.comment_count || 1) - 1
+          })
         }
-        // 성공 시 댓글 목록 새로고침
+        
+        // 댓글 목록 새로고침
         const safeId = safeParsePostId(postId)
         if (safeId !== null) await loadComments(safeId)
       }
@@ -946,6 +1048,30 @@ const PostDetail = ({ postId, category, className = '' }: PostDetailProps) => {
     
     // 로컬 스토리지에 저장
     localStorage.setItem(`comments-${postId}`, JSON.stringify(updatedComments))
+    
+    // 댓글 수 감소
+    if (post) {
+      const newCommentCount = Math.max(0, updatedComments.length + updatedComments.reduce((acc, comment) => acc + comment.replies.length, 0));
+      const updatedPost = { 
+        ...post, 
+        comment_count: newCommentCount,
+        comments_count: newCommentCount
+      }
+      setPost(updatedPost)
+      
+      // 로컬 스토리지의 게시글 목록도 업데이트
+      try {
+        const savedPosts = JSON.parse(localStorage.getItem('community-posts') || '[]')
+        const updatedPostsList = savedPosts.map((p: any) => 
+          p.id.toString() === postId 
+            ? { ...p, comment_count: newCommentCount, comments_count: newCommentCount }
+            : p
+        )
+        localStorage.setItem('community-posts', JSON.stringify(updatedPostsList))
+      } catch (error) {
+        console.warn('로컬 스토리지 게시글 목록 업데이트 실패:', error)
+      }
+    }
     
     console.log('📱 로컬 댓글 삭제 완료')
   }
@@ -1166,7 +1292,9 @@ const PostDetail = ({ postId, category, className = '' }: PostDetailProps) => {
 
   // 데이터 필드명 통일을 위한 헬퍼 함수들
   const getCommentCount = (post: Post) => {
-    return post.comment_count || post.comments_count || 0;
+    // 실제 댓글 배열의 길이를 우선으로 계산
+    const actualCommentCount = comments.length + comments.reduce((acc, comment) => acc + comment.replies.length, 0);
+    return actualCommentCount || post.comment_count || post.comments_count || 0;
   }
 
   const getViewCount = (post: Post) => {
@@ -1405,14 +1533,19 @@ const PostDetail = ({ postId, category, className = '' }: PostDetailProps) => {
             <div className="flex items-center space-x-4">
               <button
                 onClick={handleLike}
-                className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors ${
+                className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-all duration-200 ${
                   post.is_liked 
-                    ? 'bg-red-100 text-red-700' 
-                    : 'bg-white text-gray-700 hover:bg-gray-100'
+                    ? 'bg-red-100 text-red-700 shadow-md' 
+                    : 'bg-white text-gray-700 hover:bg-red-50 hover:text-red-600'
                 }`}
+                title={post.is_liked ? '좋아요 취소' : '좋아요'}
               >
-                <Heart className={`w-4 h-4 ${post.is_liked ? 'fill-current' : ''}`} />
-                <span>{safeCount(post.like_count, 0)}</span>
+                <Heart className={`w-4 h-4 transition-all duration-200 ${
+                  post.is_liked 
+                    ? 'fill-current text-red-600' 
+                    : 'text-gray-600 hover:text-red-500'
+                }`} />
+                <span className="font-medium">{safeCount(post.like_count, 0)}</span>
               </button>
               
               <button
