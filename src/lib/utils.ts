@@ -127,4 +127,77 @@ export function getTagColor(tag: string): string {
   }
   
   return colors[Math.abs(hash) % colors.length]
+}
+
+// 사이트 설정 인터페이스
+interface SiteSettings {
+  siteName: string
+  siteDescription: string
+  logoUrl: string
+  maxPostsPerDay: number
+  maxCommentsPerDay: number
+  enableImageUpload: boolean
+  maxImageSize: number
+  bannedWords: string[]
+  enableAutoModeration: boolean
+}
+
+// 기본 사이트 설정
+const defaultSettings: SiteSettings = {
+  siteName: '신용회복 커뮤니티',
+  siteDescription: '신용회복과 재기를 위한 따뜻한 공간',
+  logoUrl: '', // 빈 문자열이면 기본 아이콘 사용
+  maxPostsPerDay: 10,
+  maxCommentsPerDay: 50,
+  enableImageUpload: true,
+  maxImageSize: 5,
+  bannedWords: ['급전', '즉시대출', '무담보', '무보증', '현금화', '대출업체', '스팸', '광고'],
+  enableAutoModeration: true
+}
+
+// 사이트 설정 가져오기
+export const getSiteSettings = (): SiteSettings => {
+  // 서버 사이드에서는 항상 기본 설정 반환
+  if (typeof window === 'undefined') {
+    return { ...defaultSettings }
+  }
+  
+  try {
+    const saved = localStorage.getItem('admin-settings')
+    if (saved) {
+      const parsed = JSON.parse(saved)
+      return { ...defaultSettings, ...parsed }
+    }
+  } catch (error) {
+    console.error('사이트 설정 로드 실패:', error)
+  }
+  
+  return { ...defaultSettings }
+}
+
+// 사이트 이름 가져오기
+export const getSiteName = (): string => {
+  return getSiteSettings().siteName
+}
+
+// 사이트 설명 가져오기
+export const getSiteDescription = (): string => {
+  return getSiteSettings().siteDescription
+}
+
+// 로고 URL 가져오기
+export const getLogoUrl = (): string => {
+  return getSiteSettings().logoUrl
+}
+
+// 페이지 제목 생성
+export const createPageTitle = (pageTitle?: string): string => {
+  const siteName = getSiteName()
+  return pageTitle ? `${pageTitle} - ${siteName}` : siteName
+}
+
+// 메타 설명 생성
+export const createMetaDescription = (description?: string): string => {
+  const siteDescription = getSiteDescription()
+  return description || siteDescription
 } 

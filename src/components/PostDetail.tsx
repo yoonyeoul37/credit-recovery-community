@@ -1352,16 +1352,25 @@ const PostDetail = ({ postId, category, className = '' }: PostDetailProps) => {
                   console.log('상세 이미지 src:', safeUrl);
                   return (
                     <div key={index} className="relative group cursor-pointer">
-                      <Image
-                        src={safeUrl}
-                        alt={`게시글 이미지 ${index + 1}`}
-                        width={600}
-                        height={400}
-                        style={{ width: '100%', height: 'auto', background: 'white', display: 'block', minHeight: '100px', objectFit: 'contain', borderRadius: '12px', border: '1px solid #e5e7eb', boxShadow: '0 1px 4px rgba(0,0,0,0.04)' }}
+                      <div
+                        style={{ 
+                          width: '100%', 
+                          height: '300px',
+                          backgroundImage: `url("${safeUrl}")`,
+                          backgroundSize: 'contain',
+                          backgroundRepeat: 'no-repeat',
+                          backgroundPosition: 'center',
+                          backgroundColor: '#f9fafb',
+                          borderRadius: '12px',
+                          border: '1px solid #e5e7eb',
+                          boxShadow: '0 1px 4px rgba(0,0,0,0.04)',
+                          minHeight: '200px',
+                          cursor: 'pointer'
+                        }}
                         onClick={() => {
                           window.open(safeUrl, '_blank')
                         }}
-                        unoptimized
+                        title={`게시글 이미지 ${index + 1} - 클릭하여 크게 보기`}
                       />
                       <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-10 transition-all rounded-lg flex items-center justify-center">
                         <div className="opacity-0 group-hover:opacity-100 transition-opacity">

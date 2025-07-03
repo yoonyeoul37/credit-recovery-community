@@ -31,12 +31,12 @@ function EnvironmentStatus() {
   )
 }
 
-const liveChats = [
+// 기본 채팅방 정보 (참여자 수는 실시간으로 업데이트)
+const baseChatRooms = [
   {
     id: 1,
     title: '💬 신용점수 관련 즉석 질문방',
     description: '신용점수, 신용카드 관련 궁금한 것들을 바로바로 물어보세요!',
-    participants: 23,
     status: 'active',
     category: '신용관리',
     time: '지금 활성화'
@@ -45,7 +45,6 @@ const liveChats = [
     id: 2,
     title: '🔄 개인회생 진행 중인 분들 모임',
     description: '개인회생 진행 과정에서 생기는 궁금증들을 함께 해결해요',
-    participants: 15,
     status: 'active',
     category: '개인회생',
     time: '지금 활성화'
@@ -54,19 +53,9 @@ const liveChats = [
     id: 3,
     title: '💰 신용카드발급 · 대출 정보 공유방',
     description: '신용카드 발급과 안전한 대출 정보를 실시간으로 나눠요',
-    participants: 31,
     status: 'active',
     category: '대출정보',
     time: '지금 활성화'
-  },
-  {
-    id: 4,
-    title: '⭐ 성공사례 라이브 토크',
-    description: '신용회복에 성공한 분들이 직접 경험담을 들려드려요',
-    participants: 8,
-    status: 'scheduled',
-    category: '성공사례',
-    time: '저녁 8시 예정'
   }
 ]
 
@@ -82,8 +71,15 @@ export default function LiveChatPage() {
   const [connectionStatus, setConnectionStatus] = useState<'testing' | 'success' | 'failed' | null>(null)
   const [errorMessage, setErrorMessage] = useState<string>('')
   
-  // 현재 활성 채팅방 ID (1: 메인, 2: 개인회생, 3: 대출정보, 4: 성공사례)
+  // 현재 활성 채팅방 ID (1: 메인, 2: 개인회생, 3: 대출정보)
   const [activeRoomId, setActiveRoomId] = useState<number>(1)
+  
+  // 실시간 참여자 수 추적
+  const [roomParticipants, setRoomParticipants] = useState<{[key: number]: number}>({
+    1: 0, // 신용점수 질문방
+    2: 0, // 개인회생 모임
+    3: 0  // 대출정보 공유방
+  })
 
   // URL 파라미터에서 방 번호 확인
   useEffect(() => {
@@ -91,7 +87,7 @@ export default function LiveChatPage() {
     const roomParam = urlParams.get('room')
     if (roomParam) {
       const roomId = parseInt(roomParam)
-      if (roomId >= 1 && roomId <= 4) {
+      if (roomId >= 1 && roomId <= 3) {
         setActiveRoomId(roomId)
         console.log('🔗 URL에서 방 이동:', roomId)
       }
@@ -100,10 +96,10 @@ export default function LiveChatPage() {
 
   // 실시간 현황 상태
   const [liveStats, setLiveStats] = useState({
-    onlineUsers: 89,
-    activeRooms: 3,
-    todayQuestions: 47,
-    todayAnswers: 128
+    onlineUsers: 0,
+    activeRooms: 3, // 현재 활성화된 채팅방 수 (1,2,3번)
+    todayQuestions: 0,
+    todayAnswers: 0
   })
 
   // 실제 최근 질문들 상태
@@ -115,11 +111,20 @@ export default function LiveChatPage() {
     const roomNames: { [key: number]: string } = {
       1: '메인 채팅방',
       2: '개인회생 모임',
-      3: '대출 정보방',
-      4: '성공사례방'
+      3: '대출 정보방'
     }
     return roomNames[roomId] || `${roomId}번 방`
   }
+
+  // 실시간 참여자 수 조회
+  useEffect(() => {
+    // 초기 로드
+    fetchRoomParticipants()
+    
+    // 30초마다 참여자 수 업데이트
+    const participantInterval = setInterval(fetchRoomParticipants, 30000)
+    return () => clearInterval(participantInterval)
+  }, [])
 
   // 최근 질문들 로드
   useEffect(() => {
@@ -182,15 +187,80 @@ export default function LiveChatPage() {
     return `${diffInDays}일 전`
   }
 
+  // 실제 채팅방별 참여자 수 조회
+  const fetchRoomParticipants = async () => {
+    try {
+      const newParticipants: {[key: number]: number} = {}
+      
+      // 각 활성 채팅방의 실시간 참여자 수 확인
+      for (const roomId of [1, 2, 3]) {
+        try {
+          // 최근 10분 내에 메시지를 보낸 사용자 수로 참여자 계산
+          const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000).toISOString()
+          
+          const { data: activeUsers, error } = await supabase
+            .from('chat_messages')
+            .select('user_nickname')
+            .eq('room_id', roomId)
+            .gte('created_at', tenMinutesAgo)
+          
+          if (error) {
+            console.warn(`${roomId}번 방 참여자 조회 실패:`, error.message)
+            newParticipants[roomId] = 0
+            continue
+          }
+          
+          // 중복 제거하여 실제 활성 사용자 수 계산
+          const uniqueUsers = new Set((activeUsers || []).map(u => u.user_nickname))
+          const participantCount = uniqueUsers.size
+          
+          newParticipants[roomId] = participantCount
+          console.log(`📊 ${roomId}번 방 실제 참여자: ${participantCount}명`)
+          
+        } catch (err) {
+          console.warn(`${roomId}번 방 참여자 조회 에러:`, err)
+          newParticipants[roomId] = 0
+        }
+      }
+      
+      setRoomParticipants(newParticipants)
+      
+      // 전체 온라인 사용자 수 업데이트
+      const totalOnlineUsers = Object.values(newParticipants).reduce((sum, count) => sum + count, 0)
+      
+      // 오늘 메시지 수 조회
+      const today = new Date()
+      today.setHours(0, 0, 0, 0)
+      const todayStart = today.toISOString()
+      
+      const { data: todayMessages, error: todayError } = await supabase
+        .from('chat_messages')
+        .select('id')
+        .gte('created_at', todayStart)
+      
+      const todayMessageCount = todayMessages?.length || 0
+      
+      setLiveStats(prev => ({
+        ...prev,
+        onlineUsers: totalOnlineUsers,
+        todayQuestions: todayMessageCount,
+        todayAnswers: todayMessageCount
+      }))
+      
+    } catch (error) {
+      console.error('참여자 수 조회 실패:', error)
+    }
+  }
+
   // 실제 데이터베이스에서 실시간 현황 조회
   const fetchRealStats = async () => {
     try {
       // 실시간 접속자 수는 각 채팅방의 presence를 통해 계산
-      // 현재는 메인 채팅방(1번)과 개인회생 채팅방(2번)이 활성화
+      // 현재는 메인 채팅방(1번)과 개인회생 채팅방(2번), 대출정보방(3번)이 활성화
       let totalOnlineUsers = 0
       
       // 각 활성 채팅방의 presence 상태 확인
-      for (const roomId of [1, 2]) {
+      for (const roomId of [1, 2, 3]) {
         try {
           const channel = supabase.channel(`chat_room_${roomId}`)
           const presenceState = channel.presenceState()
@@ -336,7 +406,7 @@ export default function LiveChatPage() {
             {/* 현재 활성 채팅방 */}
             <section className="mb-8">
               {(() => {
-                const currentChat = liveChats.find(chat => chat.id === activeRoomId)
+                const currentChat = baseChatRooms.find(chat => chat.id === activeRoomId)
                 if (!currentChat) return null
                 
                 return (
@@ -380,7 +450,7 @@ export default function LiveChatPage() {
             <section className="mb-8">
               <h3 className="text-lg font-semibold text-gray-900 mb-4">🏠 다른 채팅방</h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {liveChats.filter(chat => chat.id !== activeRoomId).map((chat) => {
+                {baseChatRooms.filter(chat => chat.id !== activeRoomId).map((chat) => {
                   const handleChatClick = () => {
                     if (chat.status === 'active') {
                       // 실제 채팅방으로 전환
@@ -428,7 +498,7 @@ export default function LiveChatPage() {
                       <div className="flex items-center space-x-3">
                         <span className="flex items-center">
                           <Users className="w-3 h-3 mr-1" />
-                          {chat.participants}명
+                          {roomParticipants[chat.id] || 0}명
                         </span>
                         <span className="text-xs">
                           {chat.status === 'active' ? '지금 참여' : chat.time}

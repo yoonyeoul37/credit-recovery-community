@@ -642,22 +642,15 @@ export const useChat = (roomId: number) => {
               channel: channelName
             })
             setReconnectAttempts(0) // 성공 시 재연결 카운터 리셋
+            setIsConnected(true)
           } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
             console.error(`❌ 실시간 구독 ${status}:`, err)
-            // 간단한 재연결 로직
-            if (reconnectAttempts < 3) { // 최대 3회로 줄임
-              const delay = 5000 + (reconnectAttempts * 2000) // 5초, 7초, 9초
-              console.log(`🔄 재연결 시도 ${reconnectAttempts + 1}/3 (${delay}ms 후)...`)
-              setTimeout(() => {
-                setReconnectAttempts(prev => prev + 1)
-                setupRealtime()
-              }, delay)
-            } else {
-              console.error('❌ 재연결 포기. 수동 새로고침이 필요합니다.')
-              setError('실시간 연결에 실패했습니다. 페이지를 새로고침해주세요.')
-            }
+            setIsConnected(false)
+            // 재연결 로직 제거 - 타임아웃 시 조용히 실패
+            console.log('⚠️ 실시간 구독 실패 - 수동 새로고침으로 해결 가능')
           } else if (status === 'CLOSED') {
             console.warn('🔒 실시간 구독 연결 종료')
+            setIsConnected(false)
           }
         })
 
@@ -667,7 +660,7 @@ export const useChat = (roomId: number) => {
     } catch (err) {
       console.error('❌ 실시간 구독 설정 실패:', err)
     }
-  }, [roomId, reconnectAttempts]) // 간단한 의존성
+  }, [roomId, userHash, userNickname]) // 재연결 시도 제거
 
   // 실시간 구독 해제 (간단한 버전)
   const cleanupRealtime = useCallback(() => {

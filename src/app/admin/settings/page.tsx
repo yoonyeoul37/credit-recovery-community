@@ -21,6 +21,7 @@ export default function SystemSettings() {
   const [settings, setSettings] = useState({
     siteName: '신용회복 커뮤니티',
     siteDescription: '신용회복과 재기를 위한 따뜻한 공간',
+    logoUrl: '',
     maxPostsPerDay: 10,
     maxCommentsPerDay: 50,
     enableImageUpload: true,
@@ -28,6 +29,25 @@ export default function SystemSettings() {
     bannedWords: ['급전', '즉시대출', '무담보', '무보증', '현금화', '대출업체', '스팸', '광고'],
     enableAutoModeration: true
   })
+  
+  const [uploadingLogo, setUploadingLogo] = useState(false)
+
+  // 기존 설정 로드
+  useEffect(() => {
+    const loadSettings = () => {
+      try {
+        if (typeof window === 'undefined') return
+        const savedSettings = localStorage.getItem('admin-settings')
+        if (savedSettings) {
+          const parsed = JSON.parse(savedSettings)
+          setSettings(prev => ({ ...prev, ...parsed }))
+        }
+      } catch (error) {
+        console.error('설정 로드 실패:', error)
+      }
+    }
+    loadSettings()
+  }, [])
 
   // 공지사항 관련 상태
   const [notices, setNotices] = useState<Notice[]>([])
@@ -45,6 +65,43 @@ export default function SystemSettings() {
   useEffect(() => {
     loadNotices()
   }, [])
+
+  // 로고 파일 업로드 핸들러
+  const handleLogoUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (!file) return
+
+    // 파일 크기 체크 (2MB 제한)
+    if (file.size > 2 * 1024 * 1024) {
+      alert('❌ 파일 크기는 2MB 이하로 업로드해주세요.')
+      return
+    }
+
+    // 파일 형식 체크
+    if (!file.type.startsWith('image/')) {
+      alert('❌ 이미지 파일만 업로드 가능합니다.')
+      return
+    }
+
+    setUploadingLogo(true)
+
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      const base64 = e.target?.result as string
+      setSettings({...settings, logoUrl: base64})
+      setUploadingLogo(false)
+      
+      // 파일 input 초기화
+      event.target.value = ''
+    }
+    
+    reader.onerror = () => {
+      alert('❌ 파일 읽기에 실패했습니다.')
+      setUploadingLogo(false)
+    }
+    
+    reader.readAsDataURL(file)
+  }
 
   const loadNotices = () => {
     try {
@@ -99,6 +156,12 @@ export default function SystemSettings() {
     try {
       if (typeof window === 'undefined') return
       localStorage.setItem('admin-settings', JSON.stringify(settings))
+      
+      // 커스텀 이벤트 발생하여 다른 컴포넌트에 설정 변경 알림
+      window.dispatchEvent(new CustomEvent('siteSettingsChanged', {
+        detail: settings
+      }))
+      
       alert('✅ 설정이 저장되었습니다.')
     } catch (error) {
       alert('❌ 설정 저장에 실패했습니다.')
@@ -302,6 +365,119 @@ export default function SystemSettings() {
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                       rows={3}
                     />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">로고 이미지</label>
+                    
+                    {/* 파일 업로드 버튼 */}
+                    <div className="mb-3">
+                      <label className="inline-flex items-center px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 cursor-pointer transition-colors">
+                        {uploadingLogo ? (
+                          <>
+                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                            업로드 중...
+                          </>
+                        ) : (
+                          <>
+                            📷 내 컴퓨터에서 선택
+                          </>
+                        )}
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={handleLogoUpload}
+                          className="hidden"
+                          disabled={uploadingLogo}
+                        />
+                      </label>
+                      <span className="ml-3 text-xs text-gray-500">또는</span>
+                    </div>
+                    
+                    {/* URL 입력 */}
+                    <input
+                      type="url"
+                      value={settings.logoUrl.startsWith('data:') ? '' : settings.logoUrl}
+                      onChange={(e) => setSettings({...settings, logoUrl: e.target.value})}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                      placeholder="또는 이미지 URL 입력 (비어있으면 기본 아이콘 사용)"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">
+                      💡 권장 크기: 40x40px, 파일 크기: 2MB 이하, PNG/JPG/SVG 형식
+                    </p>
+                    
+                    {/* 샘플 로고 버튼들 */}
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setSettings({...settings, logoUrl: 'https://cdn-icons-png.flaticon.com/512/2040/2040946.png'})}
+                        className="px-3 py-1 text-xs bg-blue-100 text-blue-700 rounded-full hover:bg-blue-200 transition-colors"
+                      >
+                        💳 신용카드 아이콘
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setSettings({...settings, logoUrl: 'https://cdn-icons-png.flaticon.com/512/3106/3106773.png'})}
+                        className="px-3 py-1 text-xs bg-green-100 text-green-700 rounded-full hover:bg-green-200 transition-colors"
+                      >
+                        🏠 집 아이콘
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setSettings({...settings, logoUrl: 'https://cdn-icons-png.flaticon.com/512/5141/5141534.png'})}
+                        className="px-3 py-1 text-xs bg-purple-100 text-purple-700 rounded-full hover:bg-purple-200 transition-colors"
+                      >
+                        ⭐ 별 아이콘
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setSettings({...settings, logoUrl: ''})}
+                        className="px-3 py-1 text-xs bg-gray-100 text-gray-700 rounded-full hover:bg-gray-200 transition-colors"
+                      >
+                        🔄 기본값으로
+                      </button>
+                      {settings.logoUrl.startsWith('data:') && (
+                        <button
+                          type="button"
+                          onClick={() => setSettings({...settings, logoUrl: ''})}
+                          className="px-3 py-1 text-xs bg-red-100 text-red-700 rounded-full hover:bg-red-200 transition-colors"
+                        >
+                          🗑️ 업로드 파일 삭제
+                        </button>
+                      )}
+                    </div>
+                    
+                    {settings.logoUrl && (
+                      <div className="mt-3 p-3 bg-gray-50 rounded-lg">
+                        <div className="flex items-center justify-between mb-2">
+                          <p className="text-sm text-gray-600">미리보기:</p>
+                          <span className={`text-xs px-2 py-1 rounded-full ${
+                            settings.logoUrl.startsWith('data:') 
+                              ? 'bg-green-100 text-green-700' 
+                              : 'bg-blue-100 text-blue-700'
+                          }`}>
+                            {settings.logoUrl.startsWith('data:') ? '📁 업로드된 파일' : '🔗 URL 이미지'}
+                          </span>
+                        </div>
+                        <div className="flex items-center space-x-3">
+                          <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-green-500 rounded-full flex items-center justify-center overflow-hidden">
+                            <img 
+                              src={settings.logoUrl} 
+                              alt="로고 미리보기" 
+                              className="w-full h-full object-contain"
+                              onError={(e) => {
+                                (e.target as HTMLImageElement).style.display = 'none'
+                              }}
+                            />
+                          </div>
+                          <span className="text-sm text-gray-600">← 실제 헤더에서 이렇게 보입니다</span>
+                        </div>
+                        {settings.logoUrl.startsWith('data:') && (
+                          <p className="text-xs text-gray-500 mt-2">
+                            💾 이 이미지는 브라우저에 저장됩니다 (다른 기기에서는 보이지 않음)
+                          </p>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>

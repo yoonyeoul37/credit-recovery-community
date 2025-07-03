@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { useState, useEffect } from 'react'
 import { Heart, Home, MessageCircle, RefreshCw, Building2, DollarSign, Star, Headphones, Bookmark, User } from 'lucide-react'
-import { cn } from '@/lib/utils'
+import { cn, getSiteName, getSiteDescription, getLogoUrl } from '@/lib/utils'
 import { supabase } from '@/lib/supabase'
 
 const navigation = [
@@ -13,12 +13,47 @@ const navigation = [
   { name: '법인회생', href: '/corporate-recovery', icon: Building2 },
   { name: '대출이야기', href: '/loan-story', icon: DollarSign },
   { name: '성공사례', href: '/success-story', icon: Star },
-  { name: '실시간상담', href: '/live-chat', icon: Headphones },
+  { name: '실시간채팅', href: '/live-chat', icon: Headphones },
 ]
 
 export default function Header() {
   const [encouragementCount, setEncouragementCount] = useState<number>(156) // 기본값
   const [loading, setLoading] = useState(true)
+  const [siteName, setSiteName] = useState<string>('새출발 커뮤니티')
+  const [siteDescription, setSiteDescription] = useState<string>('함께하는 희망의 공간')
+  const [logoUrl, setLogoUrl] = useState<string>('')
+  const [isClient, setIsClient] = useState(false)
+
+  // 클라이언트 사이드 확인 및 설정 로드
+  useEffect(() => {
+    // 클라이언트 사이드임을 표시
+    setIsClient(true)
+    
+    const loadSiteSettings = () => {
+      setSiteName(getSiteName())
+      setSiteDescription(getSiteDescription())
+      setLogoUrl(getLogoUrl())
+    }
+
+    loadSiteSettings()
+    
+    // 설정 변경 감지를 위한 이벤트 리스너
+    const handleStorageChange = () => {
+      loadSiteSettings()
+    }
+
+    const handleSettingsChange = () => {
+      loadSiteSettings()
+    }
+
+    window.addEventListener('storage', handleStorageChange)
+    window.addEventListener('siteSettingsChanged', handleSettingsChange)
+    
+    return () => {
+      window.removeEventListener('storage', handleStorageChange)
+      window.removeEventListener('siteSettingsChanged', handleSettingsChange)
+    }
+  }, [])
 
   // 실시간 응원 통계 로드
   useEffect(() => {
@@ -91,12 +126,28 @@ export default function Header() {
         <div className="flex justify-between items-center py-4">
           {/* 로고 */}
           <Link href="/" className="flex items-center space-x-3">
-            <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-green-500 rounded-full flex items-center justify-center">
-              <Heart className="w-6 h-6 text-white" />
+            <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-green-500 rounded-full flex items-center justify-center overflow-hidden">
+              {isClient && logoUrl ? (
+                <img 
+                  src={logoUrl} 
+                  alt={`${siteName} 로고`}
+                  className="w-full h-full object-contain"
+                  onError={(e) => {
+                    // 이미지 로드 실패 시 기본 아이콘으로 대체
+                    (e.target as HTMLImageElement).style.display = 'none'
+                    const parent = (e.target as HTMLImageElement).parentElement
+                    if (parent) {
+                      parent.innerHTML = '<svg class="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>'
+                    }
+                  }}
+                />
+              ) : (
+                <Heart className="w-6 h-6 text-white" />
+              )}
             </div>
             <div>
-              <h1 className="text-xl font-bold text-gray-900">새출발 커뮤니티</h1>
-              <p className="text-xs text-gray-500">함께하는 희망의 공간</p>
+              <h1 className="text-xl font-bold text-gray-900">{isClient ? siteName : '새출발 커뮤니티'}</h1>
+              <p className="text-xs text-gray-500">{isClient ? siteDescription : '함께하는 희망의 공간'}</p>
             </div>
           </Link>
 
@@ -123,7 +174,9 @@ export default function Header() {
             <div className="hidden md:flex items-center space-x-1 text-sm text-gray-600">
               <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
               <span>
-                {loading ? (
+                {!isClient ? (
+                  "오늘 156명이 서로 응원했어요"
+                ) : loading ? (
                   "응원 통계 로딩 중..."
                 ) : (
                   `오늘 ${encouragementCount.toLocaleString()}명이 서로 응원했어요`

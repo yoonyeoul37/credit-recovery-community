@@ -1,9 +1,10 @@
 'use client'
 
 import Link from 'next/link'
-import { ArrowRight, TrendingUp, MessageCircleHeart, Users, Sparkles, Heart, Eye, MessageCircle, ThumbsUp, Search, Bell, Pin, AlertCircle } from 'lucide-react'
+import { ArrowRight, TrendingUp, MessageCircleHeart, Users, Sparkles, Heart, Eye, MessageCircle, ThumbsUp, Search, Bell, Pin, AlertCircle, X } from 'lucide-react'
 import { cn, formatMainPageTime } from '@/lib/utils'
 import Advertisement from '@/components/Advertisement'
+import DynamicTitle from '@/components/DynamicTitle'
 import { sampleAds } from '@/lib/ads'
 import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
@@ -58,7 +59,7 @@ const categories = [
     icon: '⭐'
   },
   {
-    name: '💬 실시간상담',
+    name: '💬 실시간채팅',
     href: '/live-chat',
     description: '라이브 채팅 상담',
     color: 'bg-neutral-600 border border-neutral-500',
@@ -110,6 +111,8 @@ export default function HomePage() {
   const [questionsLoading, setQuestionsLoading] = useState(true)
   const [notices, setNotices] = useState<Notice[]>([])
   const [noticesLoading, setNoticesLoading] = useState(true)
+  const [selectedNotice, setSelectedNotice] = useState<Notice | null>(null)
+  const [isNoticeModalOpen, setIsNoticeModalOpen] = useState(false)
 
   // 채팅방 이름 매핑
   const getRoomName = (roomId: number): string => {
@@ -328,8 +331,42 @@ export default function HomePage() {
     }
   ]
 
+  // 공지사항 클릭 핸들러
+  const handleNoticeClick = (notice: Notice) => {
+    setSelectedNotice(notice)
+    setIsNoticeModalOpen(true)
+  }
+
+  // 모달 닫기 핸들러
+  const closeNoticeModal = () => {
+    setIsNoticeModalOpen(false)
+    setSelectedNotice(null)
+  }
+
+  // ESC 키로 모달 닫기
+  useEffect(() => {
+    const handleEscKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && isNoticeModalOpen) {
+        closeNoticeModal()
+      }
+    }
+
+    if (isNoticeModalOpen) {
+      document.addEventListener('keydown', handleEscKey)
+      // 모달이 열릴 때 스크롤 방지
+      document.body.style.overflow = 'hidden'
+    }
+
+    return () => {
+      document.removeEventListener('keydown', handleEscKey)
+      // 모달이 닫힐 때 스크롤 복원
+      document.body.style.overflow = 'unset'
+    }
+  }, [isNoticeModalOpen])
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-green-50">
+      <DynamicTitle />
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* 히어로 섹션 */}
         <div className="text-center mb-16">
@@ -384,63 +421,130 @@ export default function HomePage() {
               className="inline-flex items-center px-8 py-4 bg-green-600 text-white text-lg font-semibold rounded-xl hover:bg-green-700 transition-all shadow-lg hover:shadow-xl transform hover:-translate-y-1"
             >
               <Users className="w-5 h-5 mr-2" />
-              실시간 상담
+              실시간 채팅
             </Link>
           </div>
         </div>
 
-        {/* 공지사항 섹션 - 컴팩트 버전 */}
+        {/* 공지사항 섹션 - 프리미엄 디자인 */}
         {!noticesLoading && notices.length > 0 && (
-          <div className="bg-gradient-to-r from-blue-50 to-green-50 rounded-xl p-4 mb-8 border border-blue-200">
-            <div className="flex items-center mb-3">
-              <Bell className="w-4 h-4 text-blue-500 mr-2" />
-              <h2 className="text-lg font-bold text-gray-900">📢 공지사항</h2>
-            </div>
+          <div className="relative overflow-hidden bg-gradient-to-br from-indigo-50 via-white to-purple-50 rounded-2xl p-6 mb-12 border border-indigo-200 shadow-lg">
+            {/* 배경 장식 */}
+            <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-blue-200/30 to-purple-200/30 rounded-full -translate-y-16 translate-x-16"></div>
+            <div className="absolute bottom-0 left-0 w-24 h-24 bg-gradient-to-tr from-green-200/30 to-blue-200/30 rounded-full translate-y-12 -translate-x-12"></div>
             
-            <div className="space-y-2">
-              {notices.slice(0, 2).map((notice, index) => (
-                <div key={notice.id} className={`p-3 rounded-lg border transition-all hover:shadow-sm ${
-                  notice.type === 'urgent' ? 'bg-red-50 border-red-200' :
-                  notice.type === 'warning' ? 'bg-yellow-50 border-yellow-200' :
-                  'bg-white border-blue-200'
-                }`}>
-                  <div className="flex items-center justify-between">
-                    <div className="flex-1">
-                      <div className="flex items-center space-x-2 mb-1">
-                        <span className={`px-1.5 py-0.5 rounded text-xs font-medium ${
-                          notice.type === 'urgent' ? 'bg-red-100 text-red-700' :
-                          notice.type === 'warning' ? 'bg-yellow-100 text-yellow-700' :
-                          'bg-blue-100 text-blue-700'
-                        }`}>
-                          {notice.type === 'urgent' ? '🚨' : notice.type === 'warning' ? '⚠️' : 'ℹ️'}
-                        </span>
-                        {notice.isPinned && <Pin className="w-3 h-3 text-green-600" />}
-                        <span className="text-xs text-gray-500">
-                          {new Date(notice.createdAt).toLocaleDateString('ko-KR', { month: 'short', day: 'numeric' })}
-                        </span>
+            <div className="relative z-10">
+              <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center space-x-3">
+                  <div className="flex items-center justify-center w-10 h-10 bg-gradient-to-r from-blue-500 to-purple-500 rounded-xl shadow-lg">
+                    <Bell className="w-5 h-5 text-white" />
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-bold text-gray-900">📢 공지사항</h2>
+                    <p className="text-sm text-gray-600">커뮤니티 소식을 확인하세요</p>
+                  </div>
+                </div>
+                <div className="text-xs text-gray-500 bg-white/60 px-3 py-1 rounded-full">
+                  총 {notices.length}개
+                </div>
+              </div>
+              
+              <div className="grid gap-4">
+                {notices.slice(0, 2).map((notice, index) => (
+                  <div 
+                    key={notice.id} 
+                    className={`group relative overflow-hidden rounded-xl border-2 transition-all duration-300 cursor-pointer transform hover:scale-[1.02] hover:shadow-xl ${
+                      notice.type === 'urgent' 
+                        ? 'bg-gradient-to-r from-red-50 to-pink-50 border-red-200 hover:from-red-100 hover:to-pink-100' :
+                      notice.type === 'warning' 
+                        ? 'bg-gradient-to-r from-yellow-50 to-orange-50 border-yellow-200 hover:from-yellow-100 hover:to-orange-100' :
+                        'bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200 hover:from-blue-100 hover:to-indigo-100'
+                    }`}
+                    onClick={() => handleNoticeClick(notice)}
+                  >
+                    {/* 글로우 효과 */}
+                    <div className="absolute inset-0 bg-gradient-to-r from-white/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                    
+                    <div className="relative p-5">
+                      <div className="flex items-start justify-between mb-3">
+                        <div className="flex items-center space-x-3">
+                          <div className={`flex items-center justify-center w-8 h-8 rounded-lg shadow-sm ${
+                            notice.type === 'urgent' ? 'bg-red-100' :
+                            notice.type === 'warning' ? 'bg-yellow-100' :
+                            'bg-blue-100'
+                          }`}>
+                            <span className="text-lg">
+                              {notice.type === 'urgent' ? '🚨' : notice.type === 'warning' ? '⚠️' : 'ℹ️'}
+                            </span>
+                          </div>
+                          
+                          <div className="flex items-center space-x-2">
+                            <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
+                              notice.type === 'urgent' ? 'bg-red-100 text-red-700' :
+                              notice.type === 'warning' ? 'bg-yellow-100 text-yellow-700' :
+                              'bg-blue-100 text-blue-700'
+                            }`}>
+                              {notice.type === 'urgent' ? '긴급' : notice.type === 'warning' ? '주의' : '안내'}
+                            </span>
+                            
+                            {notice.isPinned && (
+                              <div className="flex items-center space-x-1 bg-green-100 text-green-700 px-2 py-1 rounded-full">
+                                <Pin className="w-3 h-3" />
+                                <span className="text-xs font-medium">고정</span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                        
+                        <div className="text-xs text-gray-500 bg-white/50 px-2 py-1 rounded-full">
+                          {new Date(notice.createdAt).toLocaleDateString('ko-KR', { 
+                            month: 'short', 
+                            day: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit'
+                          })}
+                        </div>
                       </div>
                       
-                      <h3 className="text-sm font-semibold text-gray-900 mb-1">
+                      <h3 className="text-base font-bold text-gray-900 mb-2 group-hover:text-gray-700 transition-colors">
                         {notice.title}
                       </h3>
                       
-                      <p className="text-xs text-gray-600 leading-relaxed">
-                        {notice.content.length > 80 
-                          ? notice.content.substring(0, 80) + '...' 
+                      <p className="text-sm text-gray-600 leading-relaxed line-clamp-2">
+                        {notice.content.length > 100 
+                          ? notice.content.substring(0, 100) + '...' 
                           : notice.content}
                       </p>
+                      
+                      {/* 읽기 더보기 힌트 */}
+                      <div className="flex items-center justify-end mt-3">
+                        <span className="text-xs text-gray-400 group-hover:text-gray-600 transition-colors">
+                          클릭하여 전체 내용 보기 →
+                        </span>
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
-              
-              {notices.length > 2 && (
-                <div className="text-center pt-2">
-                  <span className="text-xs text-gray-500">
-                    +{notices.length - 2}개 공지사항 더 있음
-                  </span>
-                </div>
-              )}
+                ))}
+                
+                {notices.length > 2 && (
+                  <div className="text-center pt-3">
+                    <button
+                      onClick={() => {
+                        // 3번째 공지사항이 있으면 보여주기
+                        if (notices[2]) {
+                          handleNoticeClick(notices[2])
+                        }
+                      }}
+                      className="group inline-flex items-center space-x-2 px-4 py-2 bg-gradient-to-r from-blue-500 to-purple-500 text-white text-sm font-medium rounded-full hover:from-blue-600 hover:to-purple-600 transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl"
+                    >
+                      <span>+{notices.length - 2}개 공지사항 더 보기</span>
+                      <div className="w-4 h-4 bg-white/20 rounded-full flex items-center justify-center group-hover:bg-white/30 transition-colors">
+                        <span className="text-xs">→</span>
+                      </div>
+                    </button>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         )}
@@ -598,6 +702,134 @@ export default function HomePage() {
           </Link>
         </div>
       </div>
+
+      {/* 공지사항 모달 - 프리미엄 디자인 */}
+      {isNoticeModalOpen && selectedNotice && (
+        <div 
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in duration-300"
+          onClick={closeNoticeModal}
+        >
+          <div 
+            className="bg-white rounded-3xl max-w-3xl w-full max-h-[85vh] overflow-hidden shadow-2xl transform animate-in zoom-in-95 duration-300"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* 모달 헤더 - 그라데이션 디자인 */}
+            <div className={`relative overflow-hidden p-8 ${
+              selectedNotice.type === 'urgent' 
+                ? 'bg-gradient-to-br from-red-50 via-pink-50 to-red-100' :
+              selectedNotice.type === 'warning' 
+                ? 'bg-gradient-to-br from-yellow-50 via-orange-50 to-yellow-100' :
+                'bg-gradient-to-br from-blue-50 via-indigo-50 to-blue-100'
+            }`}>
+              {/* 배경 장식 */}
+              <div className="absolute top-0 right-0 w-32 h-32 bg-white/20 rounded-full -translate-y-16 translate-x-16"></div>
+              <div className="absolute bottom-0 left-0 w-24 h-24 bg-white/10 rounded-full translate-y-12 -translate-x-12"></div>
+              
+              <div className="relative z-10">
+                <div className="flex items-start justify-between mb-6">
+                  <div className="flex items-center space-x-4">
+                    <div className={`flex items-center justify-center w-14 h-14 rounded-2xl shadow-lg ${
+                      selectedNotice.type === 'urgent' ? 'bg-red-100' :
+                      selectedNotice.type === 'warning' ? 'bg-yellow-100' :
+                      'bg-blue-100'
+                    }`}>
+                      <span className="text-2xl">
+                        {selectedNotice.type === 'urgent' ? '🚨' : 
+                         selectedNotice.type === 'warning' ? '⚠️' : 'ℹ️'}
+                      </span>
+                    </div>
+                    
+                    <div className="flex flex-col space-y-2">
+                      <div className="flex items-center space-x-3">
+                        <span className={`px-3 py-1.5 rounded-full text-sm font-bold shadow-sm ${
+                          selectedNotice.type === 'urgent' ? 'bg-red-500 text-white' :
+                          selectedNotice.type === 'warning' ? 'bg-yellow-500 text-white' :
+                          'bg-blue-500 text-white'
+                        }`}>
+                          {selectedNotice.type === 'urgent' ? '🚨 긴급 공지' : 
+                           selectedNotice.type === 'warning' ? '⚠️ 주의 사항' : 'ℹ️ 안내 사항'}
+                        </span>
+                        
+                        {selectedNotice.isPinned && (
+                          <div className="flex items-center space-x-1 bg-green-500 text-white px-3 py-1.5 rounded-full shadow-sm">
+                            <Pin className="w-4 h-4" />
+                            <span className="text-sm font-bold">고정됨</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <button
+                    onClick={closeNoticeModal}
+                    className="p-3 hover:bg-white/50 rounded-full transition-all duration-200 group"
+                  >
+                    <X className="w-6 h-6 text-gray-500 group-hover:text-gray-700 group-hover:rotate-90 transition-all duration-200" />
+                  </button>
+                </div>
+                
+                <h2 className="text-2xl font-bold text-gray-900 mb-4 leading-tight">
+                  {selectedNotice.title}
+                </h2>
+                
+                <div className="flex items-center space-x-6 text-sm">
+                  <div className="flex items-center space-x-2 bg-white/60 px-3 py-2 rounded-full">
+                    <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                    <span className="text-gray-700 font-medium">
+                      작성: {new Date(selectedNotice.createdAt).toLocaleDateString('ko-KR', {
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                      })}
+                    </span>
+                  </div>
+                  
+                  {selectedNotice.updatedAt !== selectedNotice.createdAt && (
+                    <div className="flex items-center space-x-2 bg-white/60 px-3 py-2 rounded-full">
+                      <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                      <span className="text-gray-700 font-medium">
+                        수정: {new Date(selectedNotice.updatedAt).toLocaleDateString('ko-KR', {
+                          year: 'numeric',
+                          month: 'long',
+                          day: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit'
+                        })}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+            
+            {/* 모달 내용 */}
+            <div className="p-8 overflow-y-auto max-h-[50vh] bg-gradient-to-b from-white to-gray-50">
+              <div className="prose prose-lg max-w-none">
+                <div className="whitespace-pre-wrap text-gray-800 leading-relaxed text-base">
+                  {selectedNotice.content}
+                </div>
+              </div>
+            </div>
+            
+            {/* 모달 푸터 */}
+            <div className="p-6 bg-gradient-to-r from-gray-50 to-white border-t border-gray-100 flex justify-center">
+              <button
+                onClick={closeNoticeModal}
+                className="group px-8 py-3 bg-gradient-to-r from-blue-500 to-purple-500 text-white font-bold rounded-2xl hover:from-blue-600 hover:to-purple-600 transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl"
+              >
+                <span className="flex items-center space-x-2">
+                  <span>확인했습니다</span>
+                  <div className="w-5 h-5 bg-white/20 rounded-full flex items-center justify-center group-hover:bg-white/30 transition-colors">
+                    <span className="text-sm">✓</span>
+                  </div>
+                </span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

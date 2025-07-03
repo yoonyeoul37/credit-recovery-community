@@ -158,30 +158,54 @@ const ChatRoom = ({ roomId, className = '' }: ChatRoomProps) => {
 
     setIsSubmittingReport(true)
     
+    console.log('🚨 신고 제출 시작:', {
+      message_id: reportingMessageId,
+      reporter_ip_hash: userHash,
+      reporter_nickname: userNickname,
+      report_reason: reportReason,
+      // details: reportDetails.trim() || null, // 임시로 제거
+      status: 'pending'
+    })
+    
     try {
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('chat_reports')
         .insert({
           message_id: reportingMessageId,
           reporter_ip_hash: userHash,
           reporter_nickname: userNickname,
           report_reason: reportReason,
-          details: reportDetails.trim() || null,
+          // details: reportDetails.trim() || null, // 임시로 제거 (컬럼 없음)
           status: 'pending'
         })
+        .select()
+
+      console.log('📋 Supabase 응답:', { data, error })
 
       if (error) {
-        console.error('신고 제출 실패:', error)
-        alert('신고 제출에 실패했습니다. 다시 시도해주세요.')
+        console.error('❌ 신고 제출 실패:', error)
+        console.error('오류 상세:', {
+          message: error.message,
+          details: error.details,
+          hint: error.hint,
+          code: error.code
+        })
+        alert(`신고 제출에 실패했습니다: ${error.message}`)
         return
       }
 
+      console.log('✅ 신고 제출 성공:', data)
       alert('신고가 접수되었습니다. 관리자가 검토 후 조치하겠습니다.')
       handleCancelReport()
       
     } catch (err) {
-      console.error('신고 제출 오류:', err)
-      alert('신고 제출 중 오류가 발생했습니다.')
+      console.error('💥 신고 제출 예외:', err)
+      console.error('예외 상세:', {
+        name: err instanceof Error ? err.name : 'Unknown',
+        message: err instanceof Error ? err.message : String(err),
+        stack: err instanceof Error ? err.stack : undefined
+      })
+      alert(`신고 제출 중 오류가 발생했습니다: ${err instanceof Error ? err.message : String(err)}`)
     } finally {
       setIsSubmittingReport(false)
     }
