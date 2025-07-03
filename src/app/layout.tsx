@@ -50,6 +50,9 @@ export default function RootLayout({
         <div className="min-h-screen bg-gray-50 flex flex-col">
           <Header />
           
+          {/* 헤더와 광고 사이의 얇은 구분선 */}
+          <div className="border-t border-gray-200"></div>
+          
           {/* 헤더 바로 아래 상단 배너 광고 */}
           <div className="mt-4">
             <Advertisement
