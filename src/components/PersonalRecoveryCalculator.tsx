@@ -636,4 +636,6 @@ export default function PersonalRecoveryCalculator() {
       )}
     </div>
   )
-} 
+}
+
+export default PersonalRecoveryCalculator
