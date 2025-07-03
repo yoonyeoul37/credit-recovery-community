@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { X, ExternalLink } from 'lucide-react'
 
 interface AdProps {
@@ -15,6 +15,37 @@ interface AdProps {
   adType?: 'adsense' | 'regular'
 }
 
+// 헬퍼 함수들을 컴포넌트 밖으로 이동
+const getSizeClasses = (size: string) => {
+  switch (size) {
+    case 'small':
+      return 'h-32'
+    case 'large':
+      return 'h-40'
+    case 'banner':
+      return 'h-80' // 세로형 배너용
+    default:
+      return 'h-32'
+  }
+}
+
+const getPositionClasses = (position: string) => {
+  switch (position) {
+    case 'header':
+      return 'w-full max-w-4xl mx-auto bg-gradient-to-r from-blue-50 to-green-50 border-b border-gray-200'
+    case 'sidebar':
+      return 'w-full bg-white rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow duration-200'
+    case 'content':
+      return 'w-full max-w-2xl mx-auto bg-gray-50 rounded-xl border border-gray-200'
+    case 'footer':
+      return 'w-full max-w-4xl mx-auto bg-gray-100 border-t border-gray-200'
+    case 'adsense':
+      return 'w-full bg-gray-50 rounded-xl border border-gray-200 border-dashed'
+    default:
+      return 'w-full bg-white rounded-lg border border-gray-200'
+  }
+}
+
 const Advertisement = ({ 
   category,
   position, 
@@ -27,8 +58,27 @@ const Advertisement = ({
   adType = 'regular'
 }: AdProps) => {
   const [isVisible, setIsVisible] = useState(true)
+  const [isClient, setIsClient] = useState(false)
+
+  useEffect(() => {
+    setIsClient(true)
+  }, [])
 
   if (!isVisible) return null
+
+  // 서버사이드에서는 기본 광고만 렌더링
+  if (!isClient) {
+    return (
+      <div className="relative w-full bg-white rounded-2xl shadow-sm border border-gray-100 h-32">
+        <div className="w-full h-full flex items-center justify-center">
+          <div className="text-center text-gray-400">
+            <div className="text-xs mb-1">광고</div>
+            <div className="text-sm font-medium">로딩 중...</div>
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   // 카테고리별 광고 데이터 가져오기
   const getAdData = () => {
@@ -80,40 +130,10 @@ const Advertisement = ({
     }
   }
 
-  const getSizeClasses = () => {
-    switch (size) {
-      case 'small':
-        return 'h-32'
-      case 'large':
-        return 'h-40'
-      case 'banner':
-        return 'h-80' // 세로형 배너용
-      default:
-        return 'h-32'
-    }
-  }
-
-  const getPositionClasses = () => {
-    switch (position) {
-      case 'header':
-        return 'w-full max-w-4xl mx-auto bg-gradient-to-r from-blue-50 to-green-50 border-b border-gray-200'
-      case 'sidebar':
-        return 'w-full bg-white rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow duration-200'
-      case 'content':
-        return 'w-full max-w-2xl mx-auto bg-gray-50 rounded-xl border border-gray-200'
-      case 'footer':
-        return 'w-full max-w-4xl mx-auto bg-gray-100 border-t border-gray-200'
-      case 'adsense':
-        return 'w-full bg-gray-50 rounded-xl border border-gray-200 border-dashed'
-      default:
-        return 'w-full bg-white rounded-lg border border-gray-200'
-    }
-  }
-
   // 애드센스용 더미 광고
   if (adType === 'adsense') {
     return (
-      <div className={`relative ${getPositionClasses()} ${getSizeClasses()}`}>
+      <div className={`relative ${getPositionClasses(position)} ${getSizeClasses(size)}`}>
         <div className="w-full h-full flex items-center justify-center">
           <div className="text-center text-gray-400">
             <div className="text-xs mb-1">Google AdSense</div>
@@ -127,7 +147,7 @@ const Advertisement = ({
   // 세로형 배너 광고 (사이드바용)
   if (size === 'banner' && position === 'sidebar') {
     return (
-      <div className={`relative ${getPositionClasses()} ${getSizeClasses()}`}>
+      <div className={`relative ${getPositionClasses(position)} ${getSizeClasses(size)}`}>
         {/* 광고 표시 라벨 */}
         <div className="absolute top-3 left-3 text-xs text-gray-400 bg-gray-100 rounded-full px-2 py-1 font-medium z-10">
           광고
@@ -181,7 +201,7 @@ const Advertisement = ({
 
   // 기본 가로형 광고
   return (
-    <div className={`relative ${getPositionClasses()} ${getSizeClasses()}`}>
+    <div className={`relative ${getPositionClasses(position)} ${getSizeClasses(size)}`}>
       {/* 광고 표시 라벨 */}
       <div className={`absolute text-gray-400 bg-gray-100 rounded-full font-medium ${
         size === 'small' 

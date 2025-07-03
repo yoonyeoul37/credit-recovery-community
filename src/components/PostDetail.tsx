@@ -1276,6 +1276,54 @@ const PostDetail = ({ postId, category, className = '' }: PostDetailProps) => {
     setPasswordAction(null)
   }
 
+  // 카카오톡 공유 기능
+  const handleShare = async () => {
+    if (!post) return;
+
+    const shareUrl = window.location.href;
+    const shareTitle = post.title;
+    const shareDescription = post.content.substring(0, 100) + '...';
+
+    try {
+      // 모바일 네이티브 공유 API 사용
+      if (navigator.share) {
+        await navigator.share({
+          title: shareTitle,
+          text: shareDescription,
+          url: shareUrl
+        });
+        console.log('📱 네이티브 공유 완료');
+        return;
+      }
+
+      // 데스크톱에서는 클립보드 복사
+      if (navigator.clipboard) {
+        await navigator.clipboard.writeText(shareUrl);
+        alert('📋 링크가 클립보드에 복사되었습니다!\n\n카카오톡에서 붙여넣기 하세요.');
+        console.log('💻 클립보드 복사 완료');
+        return;
+      }
+
+      // 구형 브라우저 대응
+      const textArea = document.createElement('textarea');
+      textArea.value = shareUrl;
+      document.body.appendChild(textArea);
+      textArea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textArea);
+      
+      alert('📋 링크가 클립보드에 복사되었습니다!\n\n카카오톡에서 붙여넣기 하세요.');
+      console.log('💻 구형 브라우저 클립보드 복사 완료');
+
+    } catch (error) {
+      console.error('❌ 공유 실패:', error);
+      
+      // 실패 시 수동 복사 안내
+      const fallbackUrl = shareUrl;
+      alert(`📋 아래 링크를 복사해서 카카오톡에 붙여넣기 하세요:\n\n${fallbackUrl}`);
+    }
+  };
+
   // 댓글 좋아요(엄지) 중복 방지: localStorage liked-comments
   const getLikedComments = () => {
     if (typeof window === 'undefined') return [];
@@ -1569,7 +1617,11 @@ const PostDetail = ({ postId, category, className = '' }: PostDetailProps) => {
                 <span>{isBookmarked ? '저장됨' : '저장'}</span>
               </button>
               
-              <button className="flex items-center space-x-2 px-4 py-2 bg-white text-gray-700 rounded-lg hover:bg-gray-100 transition-colors">
+              <button 
+                onClick={handleShare}
+                className="flex items-center space-x-2 px-4 py-2 bg-white text-gray-700 rounded-lg hover:bg-gray-100 transition-colors"
+                title="카카오톡으로 공유"
+              >
                 <Share2 className="w-4 h-4" />
                 <span>공유</span>
               </button>
