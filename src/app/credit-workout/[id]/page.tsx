@@ -1,71 +1,58 @@
-import { Metadata } from 'next'
-import { Suspense } from 'react'
+'use client'
+
+import { Suspense, use } from 'react'
 import PostDetail from '@/components/PostDetail'
-import Advertisement from '@/components/Advertisement'
 import { 
   TrendingUp, 
   ExternalLink, 
   Star, 
-  DollarSign 
+  HandHeart 
 } from 'lucide-react'
 
-interface PageProps {
-  params: Promise<{ id: string }>
-}
-
-export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
-  const { id } = await params
-  // 실제로는 DB에서 게시글 정보를 가져와서 메타데이터를 생성
-  return {
-    title: `게시글 #${id} - 대출이야기`,
-    description: '신용회복 커뮤니티의 대출이야기 게시글입니다.'
-  }
-}
-
-// 대출 관련 사이드바 광고 데이터
+// 워크아웃 관련 사이드바 광고 데이터
 const sidebarAds = [
   {
     id: 1,
-    title: "면책자 전용 대출",
-    description: "면책 후 신용회복 중인 분을 위한 특별 대출",
-    cta: "대출 신청하기",
-    url: "https://example.com/discharge-loan",
+    title: "워크아웃 전문 상담",
+    description: "워크아웃 전문 변호사 무료 상담",
+    cta: "상담 신청하기",
+    url: "https://example.com/workout-counsel",
+    bgColor: "from-green-50 to-emerald-50",
+    borderColor: "border-green-200",
+    badgeColor: "bg-green-100 text-green-800",
+    buttonColor: "bg-green-600 hover:bg-green-700",
+    buttonHoverColor: "hover:bg-green-700",
+    category: ["워크아웃", "상담"]
+  },
+  {
+    id: 2,
+    title: "자율협약 컨설팅",
+    description: "자율협약 절차 및 협상 컨설팅",
+    cta: "컨설팅 받기",
+    url: "https://example.com/voluntary-agreement",
+    bgColor: "from-emerald-50 to-teal-50",
+    borderColor: "border-emerald-200",
+    badgeColor: "bg-emerald-100 text-emerald-800",
+    buttonColor: "bg-emerald-600 hover:bg-emerald-700",
+    buttonHoverColor: "hover:bg-emerald-700",
+    category: ["자율협약", "컨설팅"]
+  },
+  {
+    id: 3,
+    title: "사업정리 지원",
+    description: "사업정리 절차 및 청산 지원",
+    cta: "지원 신청하기",
+    url: "https://example.com/business-liquidation",
     bgColor: "from-teal-50 to-cyan-50",
     borderColor: "border-teal-200",
     badgeColor: "bg-teal-100 text-teal-800",
     buttonColor: "bg-teal-600 hover:bg-teal-700",
     buttonHoverColor: "hover:bg-teal-700",
-    category: ["면책후대출", "특별대출"]
-  },
-  {
-    id: 2,
-    title: "신용등급 무관 대출",
-    description: "신용등급이 낮아도 신청 가능한 대출 상품",
-    cta: "대출 상담받기",
-    url: "https://example.com/no-credit-loan",
-    bgColor: "from-cyan-50 to-blue-50",
-    borderColor: "border-cyan-200",
-    badgeColor: "bg-cyan-100 text-cyan-800",
-    buttonColor: "bg-cyan-600 hover:bg-cyan-700",
-    buttonHoverColor: "hover:bg-cyan-700",
-    category: ["저신용대출", "신용등급무관"]
-  },
-  {
-    id: 3,
-    title: "개인회생자 대출",
-    description: "개인회생 인가 후 6개월부터 대출 가능",
-    cta: "대출 확인하기",
-    url: "https://example.com/recovery-loan",
-    bgColor: "from-emerald-50 to-green-50",
-    borderColor: "border-emerald-200",
-    badgeColor: "bg-emerald-100 text-emerald-800",
-    buttonColor: "bg-emerald-600 hover:bg-emerald-700",
-    buttonHoverColor: "hover:bg-emerald-700",
-    category: ["개인회생", "대출"]
+    category: ["사업정리", "지원"]
   }
 ]
 
-// 로딩 스켈레톤 컴포넌트
+// 로딩 스켈레톤
 function PostDetailSkeleton() {
   return (
     <div className="max-w-4xl mx-auto px-4 py-8">
@@ -94,24 +81,13 @@ function PostDetailSkeleton() {
             </div>
           </div>
         </div>
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100">
-          <div className="p-6 border-b border-gray-100">
-            <div className="h-6 bg-gray-200 rounded w-32"></div>
-          </div>
-          <div className="p-6">
-            <div className="space-y-4">
-              <div className="h-20 bg-gray-200 rounded"></div>
-              <div className="h-16 bg-gray-200 rounded"></div>
-            </div>
-          </div>
-        </div>
       </div>
     </div>
   )
 }
 
-export default async function LoanStoryPostPage({ params }: PageProps) {
-  const { id } = await params
+export default function CreditWorkoutPostPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = use(params)
   
   // 랜덤 사이드바 광고 2-3개 선택
   const getRandomSidebarAds = () => {
@@ -131,7 +107,7 @@ export default async function LoanStoryPostPage({ params }: PageProps) {
             <Suspense fallback={<PostDetailSkeleton />}>
               <PostDetail 
                 postId={id} 
-                category="loan-story" 
+                category="credit-workout" 
               />
             </Suspense>
           </div>
@@ -162,14 +138,14 @@ export default async function LoanStoryPostPage({ params }: PageProps) {
             {/* 인기 태그 */}
             <div className="bg-white rounded-lg p-6 border border-gray-200">
               <h3 className="font-bold text-lg mb-4 flex items-center">
-                <TrendingUp className="w-5 h-5 mr-2 text-teal-500" />
+                <TrendingUp className="w-5 h-5 mr-2 text-green-500" />
                 인기 태그
               </h3>
               <div className="flex flex-wrap gap-2">
-                {['면책후대출', '신용등급', '대출승인', '저신용대출', '급전', '대출후기', '승인팁', '대출비교'].map((tag) => (
+                {['워크아웃', '자율협약', '사업정리', '채무조정', '구조조정', '협상', '금융기관', '컨설팅'].map((tag) => (
                   <button
                     key={tag}
-                    className="bg-gray-100 hover:bg-teal-100 text-gray-700 hover:text-teal-700 text-sm px-3 py-1 rounded-full transition-colors"
+                    className="bg-gray-100 hover:bg-green-100 text-gray-700 hover:text-green-700 text-sm px-3 py-1 rounded-full transition-colors"
                   >
                     #{tag}
                   </button>
@@ -177,18 +153,18 @@ export default async function LoanStoryPostPage({ params }: PageProps) {
               </div>
             </div>
 
-            {/* 대출 성공 팁 */}
-            <div className="bg-gradient-to-br from-teal-50 to-cyan-50 rounded-lg p-6 border border-teal-200">
+            {/* 워크아웃 성공 팁 */}
+            <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-lg p-6 border border-green-200">
               <h3 className="font-bold text-lg mb-3 flex items-center">
-                <Star className="w-5 h-5 mr-2 text-teal-500" />
-                대출 성공 팁
+                <Star className="w-5 h-5 mr-2 text-green-500" />
+                워크아웃 성공 팁
               </h3>
               <ul className="space-y-2 text-sm text-gray-700">
-                <li>• 신용정보를 미리 확인하고 오류 정정</li>
-                <li>• 여러 기관 동시 신청보다 선별적 신청</li>
-                <li>• 필요 서류를 미리 준비해서 승인율 향상</li>
-                <li>• 대출 조건을 꼼꼼히 비교하고 선택</li>
-                <li>• 상환 계획을 세우고 연체 방지</li>
+                <li>• 정확한 재무상태 진단과 개선계획 수립</li>
+                <li>• 채권금융기관과의 적극적 협상</li>
+                <li>• 자율협약 조건 성실 이행</li>
+                <li>• 전문가의 조언 적극 활용</li>
+                <li>• 구조조정 후 경영정상화 노력</li>
               </ul>
             </div>
           </div>

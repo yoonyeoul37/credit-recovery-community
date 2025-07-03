@@ -1,8 +1,10 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import PostWrite from '@/components/PostWrite'
+import Link from 'next/link'
+import PostWriteModal from '@/components/PostWriteModal'
 import { MessageCircle, Plus, Search, CreditCard, TrendingUp, Star, ExternalLink } from 'lucide-react'
+import { sidebarRandomAds } from '@/lib/ads'
 
 interface Post {
   id: number
@@ -16,6 +18,8 @@ interface Post {
   like_count: number
   comment_count: number
   prefix?: string // 말머리
+  images?: string[] // 이미지 URL 배열
+  imageCount?: number // 이미지 개수
 }
 
 interface Ad {
@@ -29,12 +33,31 @@ interface Ad {
   impressions: number
 }
 
+interface SidebarAd {
+  id: number
+  title: string
+  description: string
+  cta: string
+  url: string
+  bgColor: string
+  borderColor: string
+  badgeColor: string
+  buttonColor: string
+  buttonHoverColor: string
+  category: string[]
+}
+
 export default function CreditStoryPage() {
   const [posts, setPosts] = useState<Post[]>([])
   const [showWriteModal, setShowWriteModal] = useState(false)
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedPrefix, setSelectedPrefix] = useState('all')
   const [selectedAd, setSelectedAd] = useState<Ad | null>(null)
+  const [randomSidebarAds, setRandomSidebarAds] = useState<SidebarAd[]>([])
+  const [currentPage, setCurrentPage] = useState(1)
+  const [sortBy, setSortBy] = useState('latest') // 정렬 기준: latest, views, likes, comments
+  
+  const postsPerPage = 8 // 페이지당 8개 게시글
 
   // 광고 데이터 (1단계: 고정 광고들)
   const ads: Ad[] = [
@@ -90,7 +113,7 @@ export default function CreditStoryPage() {
     }
   ]
 
-  // 말머리별 게시글 샘플 데이터
+  // 게시글 데이터 로드 (로컬 스토리지 + 샘플 데이터)
   useEffect(() => {
     const samplePosts: Post[] = [
       {
@@ -104,7 +127,9 @@ export default function CreditStoryPage() {
         created_at: '2024-01-15T10:30:00Z',
         view_count: 234,
         like_count: 15,
-        comment_count: 8
+        comment_count: 8,
+        images: ['data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjQwIiBoZWlnaHQ9IjE1MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMjQwIiBoZWlnaHQ9IjE1MCIgZmlsbD0iIzAwNGNjMCIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMTZweCIgZmlsbD0id2hpdGUiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGR5PSIuM2VtIj7smrDrpqzsubTrk5zsnbQ8L3RleHQ+PC9zdmc+'],
+        imageCount: 1
       },
       {
         id: 2,
@@ -117,7 +142,12 @@ export default function CreditStoryPage() {
         created_at: '2024-01-14T15:20:00Z',
         view_count: 456,
         like_count: 32,
-        comment_count: 12
+        comment_count: 12,
+        images: [
+          'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjQwIiBoZWlnaHQ9IjE1MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMjQwIiBoZWlnaHQ9IjE1MCIgZmlsbD0iIzEwYjk4MSIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMTRweCIgZmlsbD0id2hpdGUiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGR5PSIuM2VtIj7si6Dsqahu2rHq0YM6IDbnp4Dquac8L3RleHQ+PC9zdmc+',
+          'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjQwIiBoZWlnaHQ9IjE1MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMjQwIiBoZWlnaHQ9IjE1MCIgZmlsbD0iIzM3MzNkYyIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMTRweCIgZmlsbD0id2hpdGUiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGR5PSIuM2VtIj5OaWNlOiA27rK8656w6quc6raI7ZXt7KeAPC90ZXh0Pjwvc3ZnPg=='
+        ],
+        imageCount: 2
       },
       {
         id: 3,
@@ -157,10 +187,108 @@ export default function CreditStoryPage() {
         view_count: 567,
         like_count: 28,
         comment_count: 15
+      },
+      // 페이징 테스트용 추가 게시글들
+      {
+        id: 6,
+        title: '[신용등급] CB에서 6등급 받은 후기',
+        content: '오늘 CB 조회해보니 6등급까지 올랐네요! 정말 기쁩니다.',
+        author: '6등급달성',
+        category: 'credit-story',
+        prefix: '신용등급',
+        tags: ['신용등급', 'CB', '성공'],
+        created_at: '2024-01-10T14:30:00Z',
+        view_count: 345,
+        like_count: 22,
+        comment_count: 9
+      },
+      {
+        id: 7,
+        title: '[경험담] 개인회생 신청 과정 상세 후기',
+        content: '작년에 개인회생 신청해서 인가 받은 과정을 자세히 공유합니다.',
+        author: '인가받음',
+        category: 'credit-story',
+        prefix: '경험담',
+        tags: ['개인회생', '신청과정', '후기'],
+        created_at: '2024-01-09T16:45:00Z',
+        view_count: 678,
+        like_count: 41,
+        comment_count: 23
+      },
+      {
+        id: 8,
+        title: '[면책후카드] 하나카드 발급 성공!',
+        content: '면책 후 8개월 만에 하나카드 체크카드 발급 성공했어요!',
+        author: '하나성공',
+        category: 'credit-story',
+        prefix: '면책후카드',
+        tags: ['하나카드', '체크카드', '발급'],
+        created_at: '2024-01-08T12:15:00Z',
+        view_count: 432,
+        like_count: 26,
+        comment_count: 14,
+        images: ['data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjQwIiBoZWlnaHQ9IjE1MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMjQwIiBoZWlnaHQ9IjE1MCIgZmlsbD0iI2VjNGNjOCIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMTZweCIgZmlsbD0id2hpdGUiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGR5PSIuM2VtIj7smZjrgZzssubTrE48L3RleHQ+PC9zdmc+'],
+        imageCount: 1
+      },
+      {
+        id: 9,
+        title: '[신용이야기] 신용관리 1년 후 변화',
+        content: '체계적으로 신용관리 한 지 1년이 되었는데 많은 변화가 있었어요.',
+        author: '1년후기',
+        category: 'credit-story',
+        prefix: '신용이야기',
+        tags: ['신용관리', '1년', '변화'],
+        created_at: '2024-01-07T10:00:00Z',
+        view_count: 523,
+        like_count: 35,
+        comment_count: 18
+      },
+      {
+        id: 10,
+        title: '[신용등급] NICE 등급 상승 팁',
+        content: 'NICE 신용평가에서 등급 올리는 실질적인 방법들을 공유합니다.',
+        author: 'NICE전문가',
+        category: 'credit-story',
+        prefix: '신용등급',
+        tags: ['NICE', '등급상승', '팁'],
+        created_at: '2024-01-06T15:30:00Z',
+        view_count: 756,
+        like_count: 42,
+        comment_count: 21
       }
     ]
 
-    setPosts(samplePosts)
+    // 로컬 스토리지에서 사용자가 작성한 게시글 가져오기
+    const savedPosts = JSON.parse(localStorage.getItem('community-posts') || '[]')
+    
+    // 기존 샘플 데이터 확인 (로컬 스토리지에 샘플 데이터가 없으면 추가)
+    const existingSamplePosts = JSON.parse(localStorage.getItem('credit-story-sample-posts') || '[]')
+    
+    if (existingSamplePosts.length === 0) {
+      // 처음 방문 시 샘플 데이터를 로컬 스토리지에 저장
+      localStorage.setItem('credit-story-sample-posts', JSON.stringify(samplePosts))
+      localStorage.setItem('community-posts', JSON.stringify([...savedPosts, ...samplePosts]))
+    }
+    
+    // 로컬 스토리지에서 모든 게시글 가져오기
+    const allPosts = JSON.parse(localStorage.getItem('community-posts') || '[]')
+    
+    // 신용이야기 카테고리만 필터링
+    const creditStoryPosts = allPosts.filter((post: Post) => 
+      post.category === 'credit-story'
+    )
+    
+    // 중복 제거 (ID 기준)
+    const uniquePosts = creditStoryPosts.filter((post: Post, index: number, self: Post[]) => 
+      index === self.findIndex((p: Post) => p.id === post.id)
+    )
+    
+    // 최신순으로 정렬
+    const sortedPosts = uniquePosts.sort((a: Post, b: Post) => 
+      new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+    )
+    
+    setPosts(sortedPosts)
   }, [])
 
   // 말머리에 맞는 광고 선택
@@ -203,14 +331,66 @@ export default function CreditStoryPage() {
     window.open(ad.url, '_blank')
   }
 
+  const prefixes = ['all', ...Array.from(new Set(posts.map(post => post.prefix).filter(Boolean)))]
+
+  // 검색 및 필터링된 게시글
   const filteredPosts = posts.filter(post => {
-    const matchesSearch = post.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         post.content.toLowerCase().includes(searchTerm.toLowerCase())
+    const matchesSearch = (post.title || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         (post.content || '').toLowerCase().includes(searchTerm.toLowerCase())
     const matchesPrefix = selectedPrefix === 'all' || post.prefix === selectedPrefix
     return matchesSearch && matchesPrefix
   })
 
-  const prefixes = ['all', ...Array.from(new Set(posts.map(post => post.prefix).filter(Boolean)))]
+  // 정렬된 게시글
+  const sortedPosts = [...filteredPosts].sort((a, b) => {
+    switch (sortBy) {
+      case 'views':
+        return b.view_count - a.view_count
+      case 'likes':
+        return b.like_count - a.like_count
+      case 'comments':
+        return b.comment_count - a.comment_count
+      case 'latest':
+      default:
+        return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+    }
+  })
+
+  // 페이징 처리
+  const totalPages = Math.ceil(sortedPosts.length / postsPerPage)
+  const startIndex = (currentPage - 1) * postsPerPage
+  const endIndex = startIndex + postsPerPage
+  const currentPosts = sortedPosts.slice(startIndex, endIndex)
+
+  // 페이지 변경 함수
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page)
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
+  // 검색어나 필터, 정렬 변경 시 첫 페이지로 이동
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [searchTerm, selectedPrefix, sortBy])
+
+  // 사이드바 광고 랜덤화 (2-3개 선택)
+  useEffect(() => {
+    const getRandomSidebarAds = () => {
+      if (sidebarRandomAds.length === 0) {
+        setRandomSidebarAds([])
+        return
+      }
+
+      // 2-3개 랜덤 선택 (중복 없이)
+      const shuffled = [...sidebarRandomAds].sort(() => Math.random() - 0.5)
+      const selectedCount = Math.min(3, Math.max(2, Math.floor(Math.random() * 2) + 2)) // 2-3개 랜덤
+      const selectedAds = shuffled.slice(0, selectedCount)
+      
+      setRandomSidebarAds(selectedAds)
+    }
+
+    getRandomSidebarAds()
+  }, [])
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -281,6 +461,16 @@ export default function CreditStoryPage() {
                 <option key={prefix} value={prefix}>[{prefix}]</option>
               ))}
             </select>
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value)}
+              className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            >
+              <option value="latest">최신순</option>
+              <option value="views">조회순</option>
+              <option value="likes">추천순</option>
+              <option value="comments">댓글순</option>
+            </select>
             <button
               onClick={() => setShowWriteModal(true)}
               className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center"
@@ -295,125 +485,165 @@ export default function CreditStoryPage() {
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
           {/* 메인 컨텐츠 */}
           <div className="lg:col-span-3">
-            {/* 게시글 목록 with 네이티브 광고 */}
+            {/* 게시글 목록 with 네이티브 광고 - 5번째 후 1개 (페이지당 8개) */}
             <div className="space-y-4">
-              {/* 첫 3개 게시글 */}
-              {filteredPosts.slice(0, 3).map(post => (
-                <div key={post.id} className="bg-white rounded-lg p-6 border border-gray-200 hover:shadow-md transition-shadow">
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <div className="flex items-center mb-2">
-                        <span className="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full mr-2">
-                          {post.prefix}
-                        </span>
-                        <span className="text-sm text-gray-500">
-                          {new Date(post.created_at).toLocaleDateString()}
-                        </span>
-                      </div>
-                      <h3 className="font-bold text-lg mb-2 hover:text-blue-600 cursor-pointer">
-                        {post.title}
-                      </h3>
-                      <p className="text-gray-600 mb-3">
-                        {post.content}
-                      </p>
-                      <div className="flex items-center justify-between text-sm text-gray-500">
-                        <span>by {post.author}</span>
-                        <div className="flex space-x-4">
-                          <span>👀 {post.view_count}</span>
-                          <span>❤️ {post.like_count}</span>
-                          <span>💬 {post.comment_count}</span>
+              {currentPosts.map((post, index) => (
+                <div key={`post-${post.id}`}>
+                  {/* 게시글 */}
+                  <Link href={`/credit-story/${post.id}`}>
+                    <div className="bg-white rounded-lg p-6 border border-gray-200 hover:shadow-md transition-shadow cursor-pointer">
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <div className="flex items-center mb-2">
+                            <span className="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full mr-2">
+                              {post.prefix}
+                            </span>
+                            <span className="text-sm text-gray-500">
+                              {new Date(post.created_at).toLocaleDateString()}
+                            </span>
+                          </div>
+                          <h3 className="font-bold text-lg mb-2 hover:text-blue-600">
+                            <span className="inline-block w-8 text-center text-base font-medium text-gray-500 mr-2">
+                              {(currentPage - 1) * postsPerPage + index + 1}.
+                            </span>
+                            {post.title}
+                          </h3>
+                          <p className="text-gray-600 mb-3">
+                            {(post.content || '').length > 40 ? (post.content || '').substring(0, 40) + '...' : (post.content || '')}
+                          </p>
+                          
+                          {/* 태그 표시 */}
+                          {post.tags && post.tags.length > 0 && (
+                            <div className="flex flex-wrap gap-1 mb-3">
+                              {post.tags.slice(0, 3).map((tag, tagIndex) => (
+                                <span
+                                  key={tagIndex}
+                                  className="bg-gray-100 text-gray-600 text-xs px-2 py-1 rounded-full"
+                                >
+                                  #{tag}
+                                </span>
+                              ))}
+                              {post.tags.length > 3 && (
+                                <span className="text-gray-400 text-xs">
+                                  +{post.tags.length - 3}
+                                </span>
+                              )}
+                            </div>
+                          )}
+                          
+                          <div className="flex items-center justify-between text-sm text-gray-500">
+                            <span>by {post.author}</span>
+                            <div className="flex space-x-4">
+                              <span>👀 {post.view_count}</span>
+                              <span>❤️ {post.like_count}</span>
+                              <span>💬 {post.comment_count}</span>
+                            </div>
+                          </div>
                         </div>
                       </div>
                     </div>
-                  </div>
+                  </Link>
+
+                  {/* 5번째 게시글 후에 네이티브 광고 표시 */}
+                  {(index + 1) === 5 && selectedAd && (
+                    <div className="bg-gradient-to-r from-yellow-50 to-orange-50 rounded-lg p-6 border-2 border-dashed border-yellow-200 hover:shadow-lg transition-all cursor-pointer mt-4"
+                         onClick={() => handleAdClick(selectedAd)}>
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <div className="flex items-center mb-2">
+                            <span className="bg-yellow-100 text-yellow-800 text-xs px-2 py-1 rounded-full mr-2">
+                              [광고]
+                            </span>
+                            <span className="text-xs text-gray-500">
+                              Sponsored
+                            </span>
+                          </div>
+                          <h3 className="font-bold text-lg mb-2 text-gray-900">
+                            {selectedAd.title}
+                          </h3>
+                          <p className="text-gray-700 mb-3">
+                            {selectedAd.description}
+                          </p>
+                          <div className="flex items-center justify-between">
+                            <button className="bg-gradient-to-r from-blue-500 to-blue-600 text-white px-4 py-2 rounded-lg hover:from-blue-600 hover:to-blue-700 transition-all flex items-center text-sm font-medium">
+                              {selectedAd.cta}
+                              <ExternalLink className="w-4 h-4 ml-2" />
+                            </button>
+                            <div className="text-xs text-gray-400">
+                              클릭: {selectedAd.clicks} | 노출: {selectedAd.impressions}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               ))}
+            </div>
 
-              {/* 네이티브 광고 */}
-              {selectedAd && (
-                <div className="bg-gradient-to-r from-yellow-50 to-orange-50 rounded-lg p-6 border-2 border-dashed border-yellow-200 hover:shadow-lg transition-all cursor-pointer"
-                     onClick={() => handleAdClick(selectedAd)}>
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <div className="flex items-center mb-2">
-                        <span className="bg-yellow-100 text-yellow-800 text-xs px-2 py-1 rounded-full mr-2">
-                          [광고]
-                        </span>
-                        <span className="text-xs text-gray-500">
-                          Sponsored
-                        </span>
-                      </div>
-                      <h3 className="font-bold text-lg mb-2 text-gray-900">
-                        {selectedAd.title}
-                      </h3>
-                      <p className="text-gray-700 mb-3">
-                        {selectedAd.description}
-                      </p>
-                      <div className="flex items-center justify-between">
-                        <button className="bg-gradient-to-r from-blue-500 to-blue-600 text-white px-4 py-2 rounded-lg hover:from-blue-600 hover:to-blue-700 transition-all flex items-center text-sm font-medium">
-                          {selectedAd.cta}
-                          <ExternalLink className="w-4 h-4 ml-2" />
-                        </button>
-                        <div className="text-xs text-gray-400">
-                          클릭: {selectedAd.clicks} | 노출: {selectedAd.impressions}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
+            {/* 페이지네이션 */}
+            {totalPages > 1 && (
+              <div className="flex justify-center items-center space-x-2 mt-8">
+                <button
+                  onClick={() => handlePageChange(currentPage - 1)}
+                  disabled={currentPage === 1}
+                  className="px-3 py-2 rounded-lg border border-gray-300 text-gray-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  이전
+                </button>
+                
+                {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+                  <button
+                    key={page}
+                    onClick={() => handlePageChange(page)}
+                    className={`px-3 py-2 rounded-lg border ${
+                      currentPage === page
+                        ? 'bg-blue-600 text-white border-blue-600'
+                        : 'border-gray-300 text-gray-600 hover:bg-gray-50'
+                    }`}
+                  >
+                    {page}
+                  </button>
+                ))}
+                
+                <button
+                  onClick={() => handlePageChange(currentPage + 1)}
+                  disabled={currentPage === totalPages}
+                  className="px-3 py-2 rounded-lg border border-gray-300 text-gray-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  다음
+                </button>
+              </div>
+            )}
 
-              {/* 나머지 게시글 */}
-              {filteredPosts.slice(3).map(post => (
-                <div key={post.id} className="bg-white rounded-lg p-6 border border-gray-200 hover:shadow-md transition-shadow">
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <div className="flex items-center mb-2">
-                        <span className="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full mr-2">
-                          {post.prefix}
-                        </span>
-                        <span className="text-sm text-gray-500">
-                          {new Date(post.created_at).toLocaleDateString()}
-                        </span>
-                      </div>
-                      <h3 className="font-bold text-lg mb-2 hover:text-blue-600 cursor-pointer">
-                        {post.title}
-                      </h3>
-                      <p className="text-gray-600 mb-3">
-                        {post.content}
-                      </p>
-                      <div className="flex items-center justify-between text-sm text-gray-500">
-                        <span>by {post.author}</span>
-                        <div className="flex space-x-4">
-                          <span>👀 {post.view_count}</span>
-                          <span>❤️ {post.like_count}</span>
-                          <span>💬 {post.comment_count}</span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              ))}
+            {/* 페이지 정보 */}
+            <div className="text-center text-sm text-gray-500 mt-4">
+              전체 {sortedPosts.length}개 중 {startIndex + 1}-{Math.min(endIndex, sortedPosts.length)}개 표시
             </div>
           </div>
 
           {/* 사이드바 */}
-          <div className="lg:col-span-1 space-y-6">
-            {/* 사이드바 배너 광고 */}
-            <div className="bg-gradient-to-br from-green-50 to-blue-50 rounded-lg p-6 border border-green-200">
-              <div className="text-center">
-                <div className="bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full inline-block mb-3">
-                  [광고]
+          <div className="lg:col-span-1 space-y-6 sticky top-6 self-start">
+            {/* 랜덤 사이드바 광고들 (2-3개) */}
+            {randomSidebarAds.length > 0 && randomSidebarAds.map((ad, index) => (
+              <div key={`sidebar-ad-${ad.id}`} className={`bg-gradient-to-br ${ad.bgColor} rounded-lg p-6 border ${ad.borderColor}`}>
+                <div className="text-center">
+                  <div className={`${ad.badgeColor} text-xs px-2 py-1 rounded-full inline-block mb-3`}>
+                    [광고]
+                  </div>
+                  <h3 className="font-bold text-lg mb-2">{ad.title}</h3>
+                  <p className="text-sm text-gray-600 mb-4">
+                    {ad.description}
+                  </p>
+                  <button 
+                    className={`${ad.buttonColor} text-white px-4 py-2 rounded-lg ${ad.buttonHoverColor} transition-colors text-sm w-full`}
+                    onClick={() => window.open(ad.url, '_blank')}
+                  >
+                    {ad.cta}
+                  </button>
                 </div>
-                <h3 className="font-bold text-lg mb-2">💳 신용카드 발급 전문</h3>
-                <p className="text-sm text-gray-600 mb-4">
-                  면책자도 OK! 당일 발급 가능한 신용카드 추천
-                </p>
-                <button className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors text-sm w-full">
-                  무료 상담 신청
-                </button>
               </div>
-            </div>
+            ))}
 
             {/* 인기 태그 */}
             <div className="bg-white rounded-lg p-6 border border-gray-200">
@@ -430,22 +660,6 @@ export default function CreditStoryPage() {
                     #{tag}
                   </button>
                 ))}
-              </div>
-            </div>
-
-            {/* 사이드바 배너 광고 2 */}
-            <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-lg p-6 border border-purple-200">
-              <div className="text-center">
-                <div className="bg-purple-100 text-purple-800 text-xs px-2 py-1 rounded-full inline-block mb-3">
-                  [광고]
-                </div>
-                <h3 className="font-bold text-lg mb-2">📊 신용등급 관리</h3>
-                <p className="text-sm text-gray-600 mb-4">
-                  AI 기반 신용관리로 6개월 내 등급 상승!
-                </p>
-                <button className="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition-colors text-sm w-full">
-                  등급 진단받기
-                </button>
               </div>
             </div>
 
@@ -466,7 +680,7 @@ export default function CreditStoryPage() {
 
       {/* 글쓰기 모달 */}
       {showWriteModal && (
-        <PostWrite
+        <PostWriteModal
           category="credit-story"
           onClose={() => setShowWriteModal(false)}
           onSubmit={(newPost) => {

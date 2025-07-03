@@ -15,7 +15,7 @@ const navigation = {
     { name: '워크아웃', href: '/credit-workout', icon: HandHeart },
   ],
   sub: [
-    { name: '대출이야기', href: '/loan-info', icon: DollarSign },
+    { name: '대출정보', href: '/loan-info', icon: DollarSign },
     { name: '뉴스', href: '/news', icon: Newspaper },
     { name: 'Q&A', href: '/qa', icon: HelpCircle },
     { name: '실시간채팅', href: '/live-chat', icon: Headphones },

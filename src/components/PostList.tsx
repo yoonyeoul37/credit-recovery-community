@@ -285,10 +285,10 @@ const PostList = ({ category, className = '', showSearch = true }: PostListProps
     if (searchFilters.query) {
       const query = searchFilters.query.toLowerCase()
       result = result.filter(post => 
-        post.title.toLowerCase().includes(query) ||
-        post.content.toLowerCase().includes(query) ||
-        post.author_nickname.toLowerCase().includes(query) ||
-        (post.tags && post.tags.some(tag => tag.toLowerCase().includes(query)))
+        (post.title || '').toLowerCase().includes(query) ||
+        (post.content || '').toLowerCase().includes(query) ||
+        (post.author_nickname || '').toLowerCase().includes(query) ||
+        (post.tags && post.tags.some(tag => (tag || '').toLowerCase().includes(query)))
       )
     }
 
@@ -339,14 +339,14 @@ const PostList = ({ category, className = '', showSearch = true }: PostListProps
               sortBy: searchFilters.sortBy,
               postA: { 
                 id: a.id, 
-                title: a.title.substring(0, 20), 
+                title: (a.title || '').substring(0, 20), 
                 created_at: a.created_at, 
                 timeA,
                 kstDateA: kstDateA.toLocaleString('ko-KR')
               },
               postB: { 
                 id: b.id, 
-                title: b.title.substring(0, 20), 
+                title: (b.title || '').substring(0, 20), 
                 created_at: b.created_at, 
                 timeB,
                 kstDateB: kstDateB.toLocaleString('ko-KR')
@@ -373,7 +373,7 @@ const PostList = ({ category, className = '', showSearch = true }: PostListProps
         const kstDate = new Date(new Date(post.created_at).getTime() + (9 * 60 * 60 * 1000))
         return {
           id: post.id,
-          title: post.title.substring(0, 30),
+          title: (post.title || '').substring(0, 30),
           created_at: post.created_at,
           kstDate: kstDate.toLocaleString('ko-KR'),
           timestamp: new Date(post.created_at).getTime(),
@@ -499,7 +499,7 @@ const PostList = ({ category, className = '', showSearch = true }: PostListProps
         </div>
       ) : (
         <div className="space-y-4">
-          {currentPosts.map((post) => (
+          {currentPosts.map((post, index) => (
             <Link
               key={post.id}
               href={`/${category}/${post.id}`}
@@ -507,6 +507,9 @@ const PostList = ({ category, className = '', showSearch = true }: PostListProps
             >
               {/* 제목 */}
               <h3 className="text-xl font-semibold text-gray-900 group-hover:text-blue-700 transition-colors mb-3 line-clamp-2">
+                <span className="inline-block w-8 text-center text-base font-medium text-gray-500 mr-2">
+                  {(currentPage - 1) * postsPerPage + index + 1}.
+                </span>
                 {post.title}
               </h3>
 

@@ -7,9 +7,12 @@ import Link from 'next/link'
 
 interface PostWriteProps {
   className?: string
+  category?: string
+  onClose?: () => void
+  onSubmit?: (post: any) => void
 }
 
-const PostWrite = ({ className = '' }: PostWriteProps) => {
+const PostWrite = ({ className = '', category: propCategory, onClose, onSubmit }: PostWriteProps) => {
   const [title, setTitle] = useState('')
   const [content, setContent] = useState('')
   const [tags, setTags] = useState<string[]>([])
@@ -24,7 +27,7 @@ const PostWrite = ({ className = '' }: PostWriteProps) => {
   
   const router = useRouter()
   const searchParams = useSearchParams()
-  const category = searchParams.get('category') || 'credit-story'
+  const category = propCategory || searchParams.get('category') || 'credit-story'
 
   // 저장된 닉네임 불러오기 또는 자동 생성
   useEffect(() => {

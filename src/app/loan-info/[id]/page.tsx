@@ -1,7 +1,7 @@
-import { Metadata } from 'next'
-import { Suspense } from 'react'
+'use client'
+
+import { Suspense, use } from 'react'
 import PostDetail from '@/components/PostDetail'
-import Advertisement from '@/components/Advertisement'
 import { 
   TrendingUp, 
   ExternalLink, 
@@ -9,20 +9,9 @@ import {
   DollarSign 
 } from 'lucide-react'
 
-interface PageProps {
-  params: Promise<{ id: string }>
-}
+// Client Component에서는 generateMetadata를 사용할 수 없으므로 제거
 
-export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
-  const { id } = await params
-  // 실제로는 DB에서 게시글 정보를 가져와서 메타데이터를 생성
-  return {
-    title: `게시글 #${id} - 대출이야기`,
-    description: '신용회복 커뮤니티의 대출이야기 게시글입니다.'
-  }
-}
-
-// 대출 관련 사이드바 광고 데이터
+// 대출정보 관련 사이드바 광고 데이터
 const sidebarAds = [
   {
     id: 1,
@@ -65,7 +54,7 @@ const sidebarAds = [
   }
 ]
 
-// 로딩 스켈레톤 컴포넌트
+// 로딩 스켈레톤
 function PostDetailSkeleton() {
   return (
     <div className="max-w-4xl mx-auto px-4 py-8">
@@ -94,24 +83,13 @@ function PostDetailSkeleton() {
             </div>
           </div>
         </div>
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100">
-          <div className="p-6 border-b border-gray-100">
-            <div className="h-6 bg-gray-200 rounded w-32"></div>
-          </div>
-          <div className="p-6">
-            <div className="space-y-4">
-              <div className="h-20 bg-gray-200 rounded"></div>
-              <div className="h-16 bg-gray-200 rounded"></div>
-            </div>
-          </div>
-        </div>
       </div>
     </div>
   )
 }
 
-export default async function LoanStoryPostPage({ params }: PageProps) {
-  const { id } = await params
+export default function LoanInfoPostPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = use(params)
   
   // 랜덤 사이드바 광고 2-3개 선택
   const getRandomSidebarAds = () => {
@@ -131,7 +109,7 @@ export default async function LoanStoryPostPage({ params }: PageProps) {
             <Suspense fallback={<PostDetailSkeleton />}>
               <PostDetail 
                 postId={id} 
-                category="loan-story" 
+                category="loan-info" 
               />
             </Suspense>
           </div>
