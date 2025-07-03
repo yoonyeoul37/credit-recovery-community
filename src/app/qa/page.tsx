@@ -4,6 +4,8 @@ import { useState, useEffect } from 'react'
 import PostList from '@/components/PostList'
 import PostWrite from '@/components/PostWrite'
 import { HelpCircle, Plus, Search, MessageSquare, Users, CheckCircle } from 'lucide-react'
+import PersonalRecoveryCalculator from '@/components/PersonalRecoveryCalculator'
+import LoanCalculator from '@/components/LoanCalculator'
 
 interface Post {
   id: number
@@ -168,6 +170,38 @@ export default function QAPage() {
               무료상담
             </button>
           </div>
+        </div>
+
+        {/* 개인회생 변제금 계산기 섹션 */}
+        <div className="mb-6 bg-gradient-to-br from-blue-50 to-purple-50 rounded-xl p-6 border border-blue-200">
+          <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center">
+            🧮 개인회생 변제금 계산기
+            <span className="ml-2 text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full">
+              자주 묻는 질문
+            </span>
+          </h3>
+          <p className="text-sm text-gray-600 mb-4">
+            "내 변제금이 얼마나 될까요?" - 가장 많이 묻는 질문을 바로 계산해보세요!
+          </p>
+          
+          {/* 계산기 컴포넌트 */}
+          <PersonalRecoveryCalculator />
+        </div>
+
+        {/* 대출 계산기 섹션 */}
+        <div className="mb-6 bg-gradient-to-br from-green-50 to-blue-50 rounded-xl p-6 border border-green-200">
+          <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center">
+            💰 대출 계산기
+            <span className="ml-2 text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full">
+              유용한 도구
+            </span>
+          </h3>
+          <p className="text-sm text-gray-600 mb-4">
+            "대출 받으면 월 상환금이 얼마나 될까요?" - 미리 계산해보고 대출 계획을 세워보세요!
+          </p>
+          
+          {/* 대출 계산기 컴포넌트 */}
+          <LoanCalculator />
         </div>
 
         {/* 통계 */}
