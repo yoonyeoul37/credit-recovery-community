@@ -4,8 +4,8 @@ import { useState, useEffect } from 'react'
 import PostList from '@/components/PostList'
 import PostWrite from '@/components/PostWrite'
 import { HelpCircle, Plus, Search, MessageSquare, Users, CheckCircle } from 'lucide-react'
-import PersonalRecoveryCalculator from '../../components/PersonalRecoveryCalculator'
-import LoanCalculator from '../../components/LoanCalculator'
+// import PersonalRecoveryCalculator from '../../components/PersonalRecoveryCalculator'
+// import LoanCalculator from '../../components/LoanCalculator'
 
 interface Post {
   id: number
@@ -185,7 +185,9 @@ export default function QAPage() {
           </p>
           
           {/* 계산기 컴포넌트 */}
-          <PersonalRecoveryCalculator />
+          <div className="p-4 bg-white rounded-lg border">
+            <p className="text-gray-600">개인회생 변제금 계산기가 곧 추가됩니다.</p>
+          </div>
         </div>
 
         {/* 대출 계산기 섹션 */}
@@ -200,8 +202,10 @@ export default function QAPage() {
             "대출 받으면 월 상환금이 얼마나 될까요?" - 미리 계산해보고 대출 계획을 세워보세요!
           </p>
           
-          {/* 대출 계산기 컴포넌트 */}
-          <LoanCalculator />
+          {/* 계산기 컴포넌트 */}
+          <div className="p-4 bg-white rounded-lg border">
+            <p className="text-gray-600">대출 계산기가 곧 추가됩니다.</p>
+          </div>
         </div>
 
         {/* 통계 */}
