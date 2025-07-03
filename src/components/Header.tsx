@@ -2,19 +2,26 @@
 
 import Link from 'next/link'
 import { useState, useEffect } from 'react'
-import { Heart, Home, MessageCircle, RefreshCw, Building2, DollarSign, Star, Headphones, Bookmark, User } from 'lucide-react'
+import { Heart, Home, MessageCircle, RefreshCw, Building2, DollarSign, Star, Headphones, Bookmark, User, CreditCard, TrendingUp, HandHeart, HelpCircle, Newspaper } from 'lucide-react'
 import { cn, getSiteName, getSiteDescription, getLogoUrl } from '@/lib/utils'
 import { supabase } from '@/lib/supabase'
 
-const navigation = [
-  { name: '홈', href: '/', icon: Home },
-  { name: '신용이야기', href: '/credit-story', icon: MessageCircle },
-  { name: '개인회생', href: '/personal-recovery', icon: RefreshCw },
-  { name: '법인회생', href: '/corporate-recovery', icon: Building2 },
-  { name: '대출이야기', href: '/loan-story', icon: DollarSign },
-  { name: '성공사례', href: '/success-story', icon: Star },
-  { name: '실시간채팅', href: '/live-chat', icon: Headphones },
-]
+const navigation = {
+  main: [
+    { name: '홈', href: '/', icon: Home },
+    { name: '신용이야기', href: '/credit-story', icon: MessageCircle },
+    { name: '개인회생파산', href: '/personal-recovery', icon: RefreshCw },
+    { name: '법인회생파산', href: '/corporate-recovery', icon: Building2 },
+    { name: '워크아웃', href: '/credit-workout', icon: HandHeart },
+  ],
+  sub: [
+    { name: '대출이야기', href: '/loan-info', icon: DollarSign },
+    { name: '뉴스', href: '/news', icon: Newspaper },
+    { name: 'Q&A', href: '/qa', icon: HelpCircle },
+    { name: '실시간채팅', href: '/live-chat', icon: Headphones },
+    // { name: '성공후기', href: '/success-story', icon: Star }, // 임시 숨김
+  ]
+}
 
 export default function Header() {
   const [encouragementCount, setEncouragementCount] = useState<number>(156) // 기본값
@@ -23,11 +30,13 @@ export default function Header() {
   const [siteDescription, setSiteDescription] = useState<string>('함께하는 희망의 공간')
   const [logoUrl, setLogoUrl] = useState<string>('')
   const [isClient, setIsClient] = useState(false)
+  const [mounted, setMounted] = useState(false) // 마운트 상태 추가
 
   // 클라이언트 사이드 확인 및 설정 로드
   useEffect(() => {
     // 클라이언트 사이드임을 표시
     setIsClient(true)
+    setMounted(true) // 마운트 완료 표시
     
     const loadSiteSettings = () => {
       setSiteName(getSiteName())
@@ -57,6 +66,9 @@ export default function Header() {
 
   // 실시간 응원 통계 로드
   useEffect(() => {
+    // 마운트되지 않았다면 실행하지 않음
+    if (!mounted) return
+
     const loadEncouragementStats = async () => {
       try {
         const today = new Date()
@@ -107,7 +119,7 @@ export default function Header() {
     // 5분마다 업데이트
     const interval = setInterval(loadEncouragementStats, 5 * 60 * 1000)
     return () => clearInterval(interval)
-  }, [])
+  }, [mounted]) // mounted 의존성 추가
 
   return (
     <header className="bg-white shadow-sm border-b border-gray-100">
@@ -174,7 +186,8 @@ export default function Header() {
             <div className="hidden md:flex items-center space-x-1 text-sm text-gray-600">
               <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
               <span>
-                {!isClient ? (
+                {!mounted ? (
+                  // 서버 렌더링과 클라이언트 초기 렌더링을 동일하게
                   "오늘 156명이 서로 응원했어요"
                 ) : loading ? (
                   "응원 통계 로딩 중..."
@@ -186,18 +199,39 @@ export default function Header() {
           </div>
         </div>
 
-        {/* 네비게이션 */}
+        {/* 2줄 네비게이션 */}
         <nav className="border-t border-gray-100">
-          <div className="flex justify-center space-x-0 overflow-x-auto py-2">
-            {navigation.map((item) => {
+          {/* 상단 메인 메뉴 */}
+          <div className="flex justify-center space-x-0 py-2 border-b border-gray-50">
+            {navigation.main.map((item) => {
               const Icon = item.icon
               return (
                 <Link
                   key={item.name}
                   href={item.href}
                   className={cn(
-                    "flex items-center space-x-2 px-4 py-3 rounded-lg text-sm font-medium transition-colors whitespace-nowrap",
-                    "text-gray-600 hover:text-blue-600 hover:bg-blue-50"
+                    "flex items-center space-x-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors whitespace-nowrap",
+                    "text-gray-700 hover:text-blue-600 hover:bg-blue-50"
+                  )}
+                >
+                  <Icon className="w-4 h-4" />
+                  <span>{item.name}</span>
+                </Link>
+              )
+            })}
+          </div>
+
+          {/* 하단 서브 메뉴 */}
+          <div className="flex justify-center space-x-0 py-2">
+            {navigation.sub.map((item) => {
+              const Icon = item.icon
+              return (
+                <Link
+                  key={item.name}
+                  href={item.href}
+                  className={cn(
+                    "flex items-center space-x-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors whitespace-nowrap",
+                    "text-gray-600 hover:text-green-600 hover:bg-green-50"
                   )}
                 >
                   <Icon className="w-4 h-4" />
