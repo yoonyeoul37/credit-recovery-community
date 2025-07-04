@@ -1,6 +1,6 @@
 'use client'
 
-import { Suspense, use, useState, useEffect } from 'react'
+import { Suspense, use } from 'react'
 import PostDetail from '@/components/PostDetail'
 import { 
   TrendingUp, 
@@ -88,20 +88,14 @@ function PostDetailSkeleton() {
 
 export default function CreditStoryPostPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params)
-  const [randomSidebarAds, setRandomSidebarAds] = useState<any[]>([])
-  const [isClient, setIsClient] = useState(false)
   
-  useEffect(() => {
-    setIsClient(true)
-    
-    // 랜덤 사이드바 광고 2-3개 선택 (클라이언트에서만)
-    const getRandomSidebarAds = () => {
-      const shuffled = [...sidebarAds].sort(() => 0.5 - Math.random())
-      return shuffled.slice(0, Math.floor(Math.random() * 2) + 2) // 2-3개
-    }
-    
-    setRandomSidebarAds(getRandomSidebarAds())
-  }, [])
+  // 랜덤 사이드바 광고 2-3개 선택
+  const getRandomSidebarAds = () => {
+    const shuffled = [...sidebarAds].sort(() => 0.5 - Math.random())
+    return shuffled.slice(0, Math.floor(Math.random() * 2) + 2) // 2-3개
+  }
+  
+  const randomSidebarAds = getRandomSidebarAds()
   
   return (
     <div className="min-h-screen bg-gray-50">
@@ -121,41 +115,27 @@ export default function CreditStoryPostPage({ params }: { params: Promise<{ id: 
           {/* 사이드바 */}
           <div className="lg:col-span-1 space-y-6 sticky top-6 self-start">
             {/* 랜덤 사이드바 광고들 (2-3개) */}
-            {isClient && randomSidebarAds.length > 0 ? (
-              randomSidebarAds.map((ad, index) => (
-                <div key={`sidebar-ad-${ad.id}`} className={`bg-gradient-to-br ${ad.bgColor} rounded-lg p-6 border ${ad.borderColor}`}>
-                  <div className="text-center">
-                    <div className={`${ad.badgeColor} text-xs px-2 py-1 rounded-full inline-block mb-3`}>
-                      [광고]
-                    </div>
-                    <h3 className="font-bold text-lg mb-2">{ad.title}</h3>
-                    <p className="text-sm text-gray-600 mb-4">
-                      {ad.description}
-                    </p>
-                    <a 
-                      href={ad.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className={`${ad.buttonColor} text-white px-4 py-2 rounded-lg transition-colors text-sm w-full inline-block text-center`}
-                    >
-                      {ad.cta}
-                    </a>
-                  </div>
-                </div>
-              ))
-            ) : (
-              // 서버사이드에서는 기본 광고 스켈레톤
-              <div className="bg-white rounded-lg p-6 border border-gray-200">
+            {randomSidebarAds.length > 0 && randomSidebarAds.map((ad, index) => (
+              <div key={`sidebar-ad-${ad.id}`} className={`bg-gradient-to-br ${ad.bgColor} rounded-lg p-6 border ${ad.borderColor}`}>
                 <div className="text-center">
-                  <div className="bg-gray-100 text-gray-800 text-xs px-2 py-1 rounded-full inline-block mb-3">
+                  <div className={`${ad.badgeColor} text-xs px-2 py-1 rounded-full inline-block mb-3`}>
                     [광고]
                   </div>
-                  <div className="h-6 bg-gray-200 rounded w-32 mx-auto mb-2"></div>
-                  <div className="h-4 bg-gray-200 rounded w-48 mx-auto mb-4"></div>
-                  <div className="h-8 bg-gray-200 rounded w-full"></div>
+                  <h3 className="font-bold text-lg mb-2">{ad.title}</h3>
+                  <p className="text-sm text-gray-600 mb-4">
+                    {ad.description}
+                  </p>
+                  <a 
+                    href={ad.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={`${ad.buttonColor} text-white px-4 py-2 rounded-lg transition-colors text-sm w-full inline-block text-center`}
+                  >
+                    {ad.cta}
+                  </a>
                 </div>
               </div>
-            )}
+            ))}
 
             {/* 인기 태그 */}
             <div className="bg-white rounded-lg p-6 border border-gray-200">

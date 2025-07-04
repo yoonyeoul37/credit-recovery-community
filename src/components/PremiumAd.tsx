@@ -116,7 +116,7 @@ const PremiumAd: React.FC<PremiumAdProps> = ({ position, className = '' }) => {
 
   if (loading) {
     return (
-      <div className={`${className} ${position === 'top' ? 'h-28' : 'h-16'} bg-gray-100 animate-pulse rounded-lg`}>
+      <div className={`${className} ${position === 'top' ? 'h-40' : 'h-16'} bg-gray-100 animate-pulse rounded-lg`}>
         <div className="flex items-center justify-center h-full">
           <div className="text-gray-400 text-sm">광고 로딩 중...</div>
         </div>
@@ -129,10 +129,10 @@ const PremiumAd: React.FC<PremiumAdProps> = ({ position, className = '' }) => {
   const currentAd = ads[currentIndex]
 
   return (
-    <div className={`${className} relative overflow-hidden rounded-lg shadow-sm`}>
+    <div className={`${className} relative overflow-hidden shadow-sm`}>
       {/* 상단 프리미엄 광고 - 작고 아담한 크기 */}
       {position === 'top' && (
-        <div className="relative h-28 bg-gradient-to-r from-blue-50 to-purple-50">
+        <div className="relative h-40 bg-gradient-to-r from-blue-50 to-purple-50">
           <div className="absolute top-1 left-2 bg-gradient-to-r from-yellow-400 to-yellow-500 text-white px-2 py-0.5 rounded-full text-xs font-bold shadow-lg">
             💎 PREMIUM
           </div>

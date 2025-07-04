@@ -50,10 +50,8 @@ export default function RootLayout({
           <Header />
           
           {/* 헤더 바로 아래 프리미엄 광고 */}
-          <div className="mt-4 pt-2">
-            <div className="max-w-2xl mx-auto px-4">
-              <PremiumAd position="top" className="w-full" />
-            </div>
+          <div className="w-full">
+            <PremiumAd position="top" className="w-full" />
           </div>
           
           <main className="flex-1">
