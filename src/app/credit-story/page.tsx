@@ -5,7 +5,9 @@ import Link from 'next/link'
 import PostWriteModal from '@/components/PostWriteModal'
 import NativeAd from '@/components/NativeAd'
 import { MessageCircle, Plus, Search, CreditCard, TrendingUp, Star, ExternalLink } from 'lucide-react'
-import { sidebarRandomAds } from '@/lib/ads'
+import Advertisement from '@/components/Advertisement'
+import { categoryAds } from '@/lib/ads'
+import { supabase } from '@/lib/supabase'
 
 interface Post {
   id: number
@@ -34,19 +36,7 @@ interface Ad {
   impressions: number
 }
 
-interface SidebarAd {
-  id: number
-  title: string
-  description: string
-  cta: string
-  url: string
-  bgColor: string
-  borderColor: string
-  badgeColor: string
-  buttonColor: string
-  buttonHoverColor: string
-  category: string[]
-}
+
 
 export default function CreditStoryPage() {
   const [posts, setPosts] = useState<Post[]>([])
@@ -54,9 +44,9 @@ export default function CreditStoryPage() {
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedPrefix, setSelectedPrefix] = useState('all')
   const [selectedAd, setSelectedAd] = useState<Ad | null>(null)
-  const [randomSidebarAds, setRandomSidebarAds] = useState<SidebarAd[]>([])
   const [currentPage, setCurrentPage] = useState(1)
   const [sortBy, setSortBy] = useState('latest') // 정렬 기준: latest, views, likes, comments
+  const [sidebarAds, setSidebarAds] = useState<any[]>([]) // 사이드바 광고 상태
 
   
   const postsPerPage = 8 // 페이지당 8개 게시글
@@ -377,25 +367,58 @@ export default function CreditStoryPage() {
   // 검색어나 필터, 정렬 변경 시 첫 페이지로 이동
   useEffect(() => {
     setCurrentPage(1)
-  }, [searchTerm, selectedPrefix, sortBy])
+    }, [searchTerm, selectedPrefix, sortBy])
 
-  // 사이드바 광고 랜덤화 (2-3개 선택)
+  // 사이드바 광고 가져오기
   useEffect(() => {
-    const getRandomSidebarAds = () => {
-      if (sidebarRandomAds.length === 0) {
-        setRandomSidebarAds([])
-        return
-      }
+    const fetchSidebarAds = async () => {
+      try {
+        console.log('🔍 사이드바 광고 조회 시작...')
+        
+        const { data: ads, error } = await supabase
+          .from('ads')
+          .select('*')
+          .eq('ad_type', 'sidebar')
+          .eq('is_active', true)
+          .order('created_at', { ascending: false })
+          .limit(3)
 
-      // 2-3개 랜덤 선택 (중복 없이)
-      const shuffled = [...sidebarRandomAds].sort(() => Math.random() - 0.5)
-      const selectedCount = Math.min(3, Math.max(2, Math.floor(Math.random() * 2) + 2)) // 2-3개 랜덤
-      const selectedAds = shuffled.slice(0, selectedCount)
-      
-      setRandomSidebarAds(selectedAds)
+        if (error) {
+          console.error('❌ 사이드바 광고 가져오기 실패:', error)
+          return
+        }
+
+        console.log('📢 사이드바 광고 가져오기 성공:', ads?.length, '개')
+        console.log('📊 사이드바 광고 데이터:', ads)
+        
+        // 데이터베이스 컬럼명을 camelCase로 변환
+        const transformedAds = ads?.map(ad => ({
+          id: ad.id,
+          title: ad.title,
+          description: ad.description,
+          imageUrl: ad.image_url,
+          targetUrl: ad.link,
+          category: ad.category,
+          adType: ad.ad_type,
+          position: ad.position,
+          size: ad.size,
+          isActive: ad.is_active,
+          clickCount: ad.click_count,
+          impressions: ad.impressions,
+          createdAt: ad.created_at,
+          expiresAt: ad.expires_at,
+          nativeConfig: ad.native_config
+        })) || []
+        
+        console.log('🔄 변환된 사이드바 광고:', transformedAds)
+        setSidebarAds(transformedAds)
+
+      } catch (error) {
+        console.error('❌ 사이드바 광고 가져오기 에러:', error)
+      }
     }
 
-    getRandomSidebarAds()
+    fetchSidebarAds()
   }, [])
 
   return (
@@ -607,26 +630,71 @@ export default function CreditStoryPage() {
 
           {/* 사이드바 */}
           <div className="lg:col-span-1 space-y-6 sticky top-6 self-start">
-            {/* 랜덤 사이드바 광고들 (2-3개) */}
-            {randomSidebarAds.length > 0 && randomSidebarAds.map((ad, index) => (
-              <div key={`sidebar-ad-${ad.id}`} className={`bg-gradient-to-br ${ad.bgColor} rounded-lg p-6 border ${ad.borderColor}`}>
-                <div className="text-center">
-                  <div className={`${ad.badgeColor} text-xs px-2 py-1 rounded-full inline-block mb-3`}>
-                    [광고]
+            {/* 관리자 등록 사이드바 광고 - 이미지 전체 */}
+            <div className="space-y-4">
+              {sidebarAds.length > 0 ? (
+                sidebarAds.map((ad, index) => (
+                  <div key={ad.id} className="group cursor-pointer">
+                    <div className="relative w-full h-48 rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-shadow">
+                      <div className="absolute top-2 left-2 z-10">
+                        <span className="bg-red-500 text-white text-xs px-2 py-1 rounded-full">
+                          광고
+                        </span>
+                      </div>
+                                             <img
+                         src={ad.imageUrl}
+                         alt={ad.title}
+                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                         onClick={() => window.open(ad.targetUrl, '_blank')}
+                       />
+                       {/* 텍스트 오버레이 - 의미있는 제목/설명이 있을 때만 표시 */}
+                       {(ad.title && ad.title !== '제목 없음' && ad.title.trim() !== '') || 
+                        (ad.description && ad.description !== '설명 없음' && ad.description.trim() !== '') ? (
+                         <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-4">
+                           {ad.title && ad.title !== '제목 없음' && ad.title.trim() !== '' && (
+                             <h3 className="text-white font-bold text-sm mb-1">{ad.title}</h3>
+                           )}
+                           {ad.description && ad.description !== '설명 없음' && ad.description.trim() !== '' && (
+                             <p className="text-white/90 text-xs">{ad.description}</p>
+                           )}
+                         </div>
+                       ) : null}
+                    </div>
                   </div>
-                  <h3 className="font-bold text-lg mb-2">{ad.title}</h3>
-                  <p className="text-sm text-gray-600 mb-4">
-                    {ad.description}
-                  </p>
-                  <button 
-                    className={`${ad.buttonColor} text-white px-4 py-2 rounded-lg ${ad.buttonHoverColor} transition-colors text-sm w-full`}
-                    onClick={() => window.open(ad.url, '_blank')}
-                  >
-                    {ad.cta}
-                  </button>
-                </div>
-              </div>
-            ))}
+                ))
+              ) : (
+                // 관리자 광고가 없을 때 기본 광고 표시
+                categoryAds.creditStory.slice(0, 2).map((ad, index) => (
+                  <div key={index} className="group cursor-pointer">
+                    <div className="relative w-full h-48 rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-shadow">
+                      <div className="absolute top-2 left-2 z-10">
+                        <span className="bg-red-500 text-white text-xs px-2 py-1 rounded-full">
+                          광고
+                        </span>
+                      </div>
+                                             <img
+                         src={ad.image}
+                         alt={ad.title}
+                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                         onClick={() => window.open(ad.link, '_blank')}
+                       />
+                       {/* 텍스트 오버레이 - 의미있는 제목/설명이 있을 때만 표시 */}
+                       {(ad.title && ad.title !== '제목 없음' && ad.title.trim() !== '') || 
+                        (ad.description && ad.description !== '설명 없음' && ad.description.trim() !== '') ? (
+                         <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-4">
+                           {ad.title && ad.title !== '제목 없음' && ad.title.trim() !== '' && (
+                             <h3 className="text-white font-bold text-sm mb-1">{ad.title}</h3>
+                           )}
+                           {ad.description && ad.description !== '설명 없음' && ad.description.trim() !== '' && (
+                             <p className="text-white/90 text-xs">{ad.description}</p>
+                           )}
+                         </div>
+                       ) : null}
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
 
             {/* 인기 태그 */}
             <div className="bg-white rounded-lg p-6 border border-gray-200">

@@ -157,10 +157,12 @@ export default function AdManagement() {
       const compressedBase64 = await compressImage(file)
       
       setFormData(prev => ({ ...prev, imageUrl: compressedBase64 }))
-      setUploading(false)
+      console.log('✅ 이미지 압축 완료!')
       
     } catch (error) {
-      // console.error('이미지 처리 오류:', error) - 성능 최적화
+      console.error('❌ 이미지 처리 오류:', error)
+      alert('이미지 압축에 실패했습니다. 다른 이미지를 시도해주세요.')
+    } finally {
       setUploading(false)
     }
   }
@@ -302,12 +304,12 @@ export default function AdManagement() {
   }
 
   const handleAddAd = async () => {
-    // 간단한 유효성 검사 추가
-    if (!formData.title.trim()) {
-      return // 조용히 처리
-    }
+    // 💡 유효성 검사 완화 - "제목 없음"도 허용
+    // if (!formData.title.trim()) {
+    //   return
+    // }
 
-    setUploading(true) // loading 대신 uploading 사용
+    setLoading(true) // loading 상태 사용으로 변경
     
     try {
       const response = await fetch('/api/ads', {
@@ -328,15 +330,18 @@ export default function AdManagement() {
         setShowAddModal(false)
         resetForm()
         
-        // 성공 시 조용히 처리
+        // ✅ 간단한 성공 피드백 추가
+        console.log('✅ 광고가 성공적으로 추가되었습니다!')
       } else {
         const data = await response.json()
-        // console.error('광고 추가 실패:', data.error) - 성능 최적화
+        console.error('❌ 광고 추가 실패:', data.error)
+        alert('광고 추가에 실패했습니다. 다시 시도해주세요.')
       }
     } catch (error) {
-      // console.error('광고 추가 오류:', error) - 성능 최적화
+      console.error('❌ 광고 추가 오류:', error)
+      alert('네트워크 오류가 발생했습니다. 다시 시도해주세요.')
     } finally {
-      setUploading(false)
+      setLoading(false) // loading 상태 해제
     }
   }
 
@@ -344,6 +349,8 @@ export default function AdManagement() {
     if (!editingAd) {
       return
     }
+
+    setLoading(true) // 로딩 상태 추가
 
     try {
       const response = await fetch('/api/ads', {
@@ -361,14 +368,19 @@ export default function AdManagement() {
         await fetchAds() // 목록 새로고침
         setEditingAd(null)
         resetForm()
-        // alert('광고가 성공적으로 수정되었습니다.') - 성능 최적화
+        
+        // ✅ 성공 피드백 추가
+        console.log('✅ 광고가 성공적으로 수정되었습니다!')
       } else {
         const data = await response.json()
-        // alert(`광고 수정에 실패했습니다: ${data.error}`) - 성능 최적화
+        console.error('❌ 광고 수정 실패:', data.error)
+        alert('광고 수정에 실패했습니다. 다시 시도해주세요.')
       }
     } catch (error) {
-      // console.error('광고 수정 오류:', error) - 성능 최적화
-      // alert('광고 수정 중 오류가 발생했습니다.') - 성능 최적화
+      console.error('❌ 광고 수정 오류:', error)
+      alert('네트워크 오류가 발생했습니다. 다시 시도해주세요.')
+    } finally {
+      setLoading(false) // 로딩 상태 해제
     }
   }
 

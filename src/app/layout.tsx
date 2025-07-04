@@ -3,9 +3,8 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
-import Advertisement from "@/components/Advertisement";
+import PremiumAd from "@/components/PremiumAd";
 import EnvInjector from "@/components/EnvInjector";
-import { sampleAds } from "@/lib/ads";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -47,37 +46,26 @@ export default function RootLayout({
     <html lang="ko">
       <body className={inter.className}>
         <EnvInjector />
-        <div className="min-h-screen bg-gray-50 flex flex-col">
+        <div className="min-h-screen bg-gray-50 flex flex-col pb-20">
           <Header />
           
-          {/* 헤더 바로 아래 상단 배너 광고 */}
-          <div className="mt-4 border-t border-gray-200 pt-4">
-            <Advertisement
-              position="header"
-              title={sampleAds.header.title}
-              description={sampleAds.header.description}
-              link={sampleAds.header.link}
-              size="small"
-              closeable={true}
-            />
+          {/* 헤더 바로 아래 프리미엄 광고 */}
+          <div className="mt-4 pt-2">
+            <div className="max-w-2xl mx-auto px-4">
+              <PremiumAd position="top" className="w-full" />
+            </div>
           </div>
           
           <main className="flex-1">
             {children}
           </main>
           
-          {/* 푸터 위 하단 배너 광고 */}
-          <div className="mt-8">
-            <Advertisement
-              position="footer"
-              title={sampleAds.footer.title}
-              description={sampleAds.footer.description}
-              link={sampleAds.footer.link}
-              size="medium"
-            />
-          </div>
-          
           <Footer />
+        </div>
+        
+        {/* 하단 스티키 광고 - 모든 페이지에서 표시 */}
+        <div className="fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-gray-200 shadow-lg">
+          <PremiumAd position="bottom" className="w-full" />
         </div>
       </body>
     </html>

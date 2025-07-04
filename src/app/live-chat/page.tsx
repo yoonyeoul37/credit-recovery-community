@@ -80,6 +80,9 @@ export default function LiveChatPage() {
     2: 0, // 개인회생 모임
     3: 0  // 대출정보 공유방
   })
+  
+  // 사이드바 광고 상태
+  const [sidebarAds, setSidebarAds] = useState<any[]>([])
 
   // URL 파라미터에서 방 번호 확인
   useEffect(() => {
@@ -169,6 +172,58 @@ export default function LiveChatPage() {
     // 1분마다 질문 목록 업데이트
     const interval = setInterval(loadRecentQuestions, 60000)
     return () => clearInterval(interval)
+  }, [])
+
+  // 사이드바 광고 가져오기
+  useEffect(() => {
+    const fetchSidebarAds = async () => {
+      try {
+        console.log('🔍 라이브채팅 사이드바 광고 조회 시작...')
+        
+        const { data: ads, error } = await supabase
+          .from('ads')
+          .select('*')
+          .eq('ad_type', 'sidebar')
+          .eq('is_active', true)
+          .order('created_at', { ascending: false })
+          .limit(3)
+
+        if (error) {
+          console.error('❌ 라이브채팅 사이드바 광고 가져오기 실패:', error)
+          return
+        }
+
+        console.log('📢 라이브채팅 사이드바 광고 가져오기 성공:', ads?.length, '개')
+        console.log('📊 라이브채팅 사이드바 광고 데이터:', ads)
+        
+        // 데이터베이스 컬럼명을 camelCase로 변환
+        const transformedAds = ads?.map(ad => ({
+          id: ad.id,
+          title: ad.title,
+          description: ad.description,
+          imageUrl: ad.image_url,
+          targetUrl: ad.link,
+          category: ad.category,
+          adType: ad.ad_type,
+          position: ad.position,
+          size: ad.size,
+          isActive: ad.is_active,
+          clickCount: ad.click_count,
+          impressions: ad.impressions,
+          createdAt: ad.created_at,
+          expiresAt: ad.expires_at,
+          nativeConfig: ad.native_config
+        })) || []
+        
+        console.log('🔄 변환된 라이브채팅 사이드바 광고:', transformedAds)
+        setSidebarAds(transformedAds)
+
+      } catch (error) {
+        console.error('❌ 라이브채팅 사이드바 광고 가져오기 에러:', error)
+      }
+    }
+
+    fetchSidebarAds()
   }, [])
 
   // 시간 포맷 함수
@@ -579,19 +634,70 @@ export default function LiveChatPage() {
 
           {/* 사이드바 */}
           <div className="lg:col-span-1 space-y-6">
-            {/* 실시간상담 관련 광고 */}
+            {/* 관리자 등록 사이드바 광고 - 이미지 전체 */}
             <div className="space-y-4">
-              {categoryAds.liveChat.map((ad, index) => (
-                <Advertisement
-                  key={index}
-                  position="sidebar"
-                  title={ad.title}
-                  description={ad.description}
-                  link={ad.link}
-                  size="medium"
-                  closeable={true}
-                />
-              ))}
+              {sidebarAds.length > 0 ? (
+                sidebarAds.map((ad, index) => (
+                  <div key={ad.id} className="group cursor-pointer">
+                    <div className="relative w-full h-48 rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-shadow">
+                      <div className="absolute top-2 left-2 z-10">
+                        <span className="bg-red-500 text-white text-xs px-2 py-1 rounded-full">
+                          광고
+                        </span>
+                      </div>
+                                             <img
+                         src={ad.imageUrl}
+                         alt={ad.title}
+                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                         onClick={() => window.open(ad.targetUrl, '_blank')}
+                       />
+                       {/* 텍스트 오버레이 - 의미있는 제목/설명이 있을 때만 표시 */}
+                       {(ad.title && ad.title !== '제목 없음' && ad.title.trim() !== '') || 
+                        (ad.description && ad.description !== '설명 없음' && ad.description.trim() !== '') ? (
+                         <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-4">
+                           {ad.title && ad.title !== '제목 없음' && ad.title.trim() !== '' && (
+                             <h3 className="text-white font-bold text-sm mb-1">{ad.title}</h3>
+                           )}
+                           {ad.description && ad.description !== '설명 없음' && ad.description.trim() !== '' && (
+                             <p className="text-white/90 text-xs">{ad.description}</p>
+                           )}
+                         </div>
+                       ) : null}
+                    </div>
+                  </div>
+                ))
+              ) : (
+                // 관리자 광고가 없을 때 기본 광고 표시
+                categoryAds.liveChat.map((ad, index) => (
+                  <div key={index} className="group cursor-pointer">
+                    <div className="relative w-full h-48 rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-shadow">
+                      <div className="absolute top-2 left-2 z-10">
+                        <span className="bg-red-500 text-white text-xs px-2 py-1 rounded-full">
+                          광고
+                        </span>
+                      </div>
+                                             <img
+                         src={ad.image}
+                         alt={ad.title}
+                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                         onClick={() => window.open(ad.link, '_blank')}
+                       />
+                       {/* 텍스트 오버레이 - 의미있는 제목/설명이 있을 때만 표시 */}
+                       {(ad.title && ad.title !== '제목 없음' && ad.title.trim() !== '') || 
+                        (ad.description && ad.description !== '설명 없음' && ad.description.trim() !== '') ? (
+                         <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-4">
+                           {ad.title && ad.title !== '제목 없음' && ad.title.trim() !== '' && (
+                             <h3 className="text-white font-bold text-sm mb-1">{ad.title}</h3>
+                           )}
+                           {ad.description && ad.description !== '설명 없음' && ad.description.trim() !== '' && (
+                             <p className="text-white/90 text-xs">{ad.description}</p>
+                           )}
+                         </div>
+                       ) : null}
+                    </div>
+                  </div>
+                ))
+              )}
             </div>
             
             {/* 구글 애드센스 광고 자리 */}

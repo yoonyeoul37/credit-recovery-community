@@ -28,52 +28,72 @@ export const categoryAds = {
     {
       title: '개인회생 전문 법무사 상담',
       description: '무료 상담으로 개인회생 절차를 도와드립니다.',
-      link: 'https://example.com/personal-recovery-law'
+      link: 'https://example.com/personal-recovery-law',
+      image: 'https://images.unsplash.com/photo-1589829545856-d10d557cf95f?w=300&h=200&fit=crop'
     },
     {
       title: '개인회생 성공률 90% 법무사',
       description: '15년 경력의 전문가가 함께합니다.',
-      link: 'https://example.com/recovery-expert'
+      link: 'https://example.com/recovery-expert',
+      image: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=300&h=200&fit=crop'
     }
   ],
   corporateRecovery: [
     {
       title: '법인회생 전문 변호사',
       description: '사업재생과 법인회생을 전문으로 합니다.',
-      link: 'https://example.com/corporate-recovery'
+      link: 'https://example.com/corporate-recovery',
+      image: 'https://images.unsplash.com/photo-1560472354-b33ff0c44a43?w=300&h=200&fit=crop'
     }
   ],
   creditStory: [
     {
       title: '신용점수 무료 조회',
       description: '3개 신용평가사 점수를 한번에 확인하세요.',
-      link: 'https://example.com/credit-score'
+      link: 'https://example.com/credit-score',
+      image: 'https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?w=300&h=200&fit=crop'
+    },
+    {
+      title: '💳 면책후 신용카드 발급',
+      description: '면책 완료자도 신용카드 발급 가능! 무료 상담 후 당일 발급',
+      link: 'https://example.com/credit-card-recovery',
+      image: 'https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?w=300&h=200&fit=crop'
+    },
+    {
+      title: '📊 신용등급 관리 서비스',
+      description: 'AI 기반 맞춤 신용관리로 6개월 내 등급 상승 보장',
+      link: 'https://example.com/credit-grade-management',
+      image: 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=300&h=200&fit=crop'
     }
   ],
   loanStory: [
     {
       title: '2금융권 대출 비교',
       description: '안전하고 투명한 대출상품 비교서비스',
-      link: 'https://example.com/loan-compare'
+      link: 'https://example.com/loan-compare',
+      image: 'https://images.unsplash.com/photo-1579621970563-ebec7560ff3e?w=300&h=200&fit=crop'
     }
   ],
   successStory: [
     {
       title: '신용회복 성공사례',
       description: '체계적인 신용관리 시스템을 제공합니다.',
-      link: 'https://example.com/success-system'
+      link: 'https://example.com/success-system',
+      image: 'https://images.unsplash.com/photo-1519452634265-7b808fcb3be2?w=300&h=200&fit=crop'
     }
   ],
   liveChat: [
     {
       title: '24시간 신용상담 핫라인',
       description: '전문 상담사가 실시간으로 도와드립니다.',
-      link: 'https://example.com/live-consultation'
+      link: 'https://example.com/live-consultation',
+      image: 'https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?w=300&h=200&fit=crop'
     },
     {
       title: '무료 부채정리 상담',
       description: '1:1 맞춤 상담으로 부채 문제를 해결하세요.',
-      link: 'https://example.com/debt-consultation'
+      link: 'https://example.com/debt-consultation',
+      image: 'https://images.unsplash.com/photo-1554224155-6726b3ff858f?w=300&h=200&fit=crop'
     }
   ]
 }

@@ -367,6 +367,13 @@ export default function AdminDashboard() {
                     광고 관리
                   </Link>
                   <Link 
+                    href="/admin/premium-ads"
+                    className="flex items-center px-3 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+                  >
+                    <TrendingUp className="w-5 h-5 mr-3" />
+                    💎 프리미엄 광고
+                  </Link>
+                  <Link 
                     href="/admin/reports"
                     className="flex items-center px-3 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
                   >

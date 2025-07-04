@@ -61,6 +61,7 @@ export default function SuccessStoryPage() {
                   title={ad.title}
                   description={ad.description}
                   link={ad.link}
+                  image={ad.image}
                   size="medium"
                   closeable={true}
                 />
