@@ -13,6 +13,8 @@ import {
   ChevronRight
 } from 'lucide-react'
 import SearchBar, { SearchFilters } from './SearchBar'
+import NativeAd from './NativeAd'
+import TestNativeAd from './TestNativeAd'
 
 interface Post {
   id: number
@@ -472,6 +474,30 @@ const PostList = ({ category, className = '', showSearch = true }: PostListProps
       )}
 
       {/* 게시글 목록 */}
+      {(() => {
+        console.log('🔍 PostList 렌더링 상태:', {
+          category,
+          filteredPostsLength: filteredPosts.length,
+          currentPostsLength: currentPosts.length,
+          currentPage,
+          startIndex,
+          endIndex
+        })
+        
+        if (filteredPosts.length === 0) {
+          console.log('❌ filteredPosts가 비어있음 - 빈 상태 표시')
+        } else {
+          console.log('✅ filteredPosts 있음 - 게시글 목록 렌더링')
+          console.log('📝 currentPosts:', currentPosts.map((post, index) => ({ 
+            index, 
+            id: post.id, 
+            title: post.title.substring(0, 50) + '...' 
+          })))
+        }
+        
+        return null
+      })()}
+      
       {filteredPosts.length === 0 ? (
         <div className="text-center py-12 bg-white rounded-lg border border-gray-200">
           <div className="text-gray-500 mb-4">
@@ -499,50 +525,71 @@ const PostList = ({ category, className = '', showSearch = true }: PostListProps
         </div>
       ) : (
         <div className="space-y-4">
-          {currentPosts.map((post, index) => (
-            <Link
-              key={post.id}
-              href={`/${category}/${post.id}`}
-              className="block bg-white rounded-lg border border-gray-200 hover:border-blue-300 hover:shadow-md transition-all p-8 group"
-            >
-              {/* 제목 */}
-              <h3 className="text-xl font-semibold text-gray-900 group-hover:text-blue-700 transition-colors mb-3 line-clamp-2">
-                <span className="inline-block w-8 text-center text-base font-medium text-gray-500 mr-2">
-                  {(currentPage - 1) * postsPerPage + index + 1}.
-                </span>
-                {post.title}
-              </h3>
-
-              {/* 메타 정보 */}
-              <div className="flex items-center justify-between text-base text-gray-500">
-                <div className="flex items-center space-x-6">
-                  <div className="flex items-center space-x-2">
-                    <User className="w-5 h-5" />
-                    <span className="font-medium text-green-700">💚 {post.author_nickname}</span>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <Clock className="w-5 h-5" />
-                    <span>{formatTimeAgo(post.created_at)}</span>
-                  </div>
-                </div>
+          {/* 강제 테스트 네이티브 광고 (항상 표시) */}
+          <div className="mb-6 p-6 bg-purple-50 border-2 border-purple-300 rounded-lg">
+            <div className="text-center">
+              <h3 className="text-lg font-bold text-purple-800 mb-2">🧪 강제 테스트 네이티브 광고</h3>
+              <p className="text-purple-700">이 광고가 보인다면 PostList 렌더링은 정상입니다!</p>
+              <p className="text-sm text-purple-600 mt-2">Category: {category}, Posts: {currentPosts.length}개</p>
+            </div>
+          </div>
+          
+          {currentPosts.map((post, index) => {
+            console.log(`🎯 게시글 ${index} 렌더링 중:`, { id: post.id, title: post.title.substring(0, 30) })
+            
+            return (
+              <div key={post.id}>
+                {/* 네이티브 광고 삽입 */}
+                {(() => {
+                  console.log(`📢 NativeAd 호출: category=${category}, index=${index}`)
+                  return <NativeAd category={category} index={index} />
+                })()}
                 
-                <div className="flex items-center space-x-6">
-                  <div className="flex items-center space-x-1">
-                    <Eye className="w-5 h-5" />
-                    <span>{getViewCount(post)}</span>
+                {/* 게시글 */}
+                <Link
+                  href={`/${category}/${post.id}`}
+                  className="block bg-white rounded-lg border border-gray-200 hover:border-blue-300 hover:shadow-md transition-all p-8 group"
+                >
+                  {/* 제목 */}
+                  <h3 className="text-xl font-semibold text-gray-900 group-hover:text-blue-700 transition-colors mb-3 line-clamp-2">
+                    <span className="inline-block w-8 text-center text-base font-medium text-gray-500 mr-2">
+                      {(currentPage - 1) * postsPerPage + index + 1}.
+                    </span>
+                    {post.title}
+                  </h3>
+
+                  {/* 메타 정보 */}
+                  <div className="flex items-center justify-between text-base text-gray-500">
+                    <div className="flex items-center space-x-6">
+                      <div className="flex items-center space-x-2">
+                        <User className="w-5 h-5" />
+                        <span className="font-medium text-green-700">💚 {post.author_nickname}</span>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Clock className="w-5 h-5" />
+                        <span>{formatTimeAgo(post.created_at)}</span>
+                      </div>
+                    </div>
+                    
+                    <div className="flex items-center space-x-6">
+                      <div className="flex items-center space-x-1">
+                        <Eye className="w-5 h-5" />
+                        <span>{getViewCount(post)}</span>
+                      </div>
+                      <div className="flex items-center space-x-1">
+                        <Heart className="w-5 h-5" />
+                        <span>{getLikeCount(post)}</span>
+                      </div>
+                      <div className="flex items-center space-x-1">
+                        <MessageCircle className="w-5 h-5" />
+                        <span>{getCommentCount(post)}</span>
+                      </div>
+                    </div>
                   </div>
-                  <div className="flex items-center space-x-1">
-                    <Heart className="w-5 h-5" />
-                    <span>{getLikeCount(post)}</span>
-                  </div>
-                  <div className="flex items-center space-x-1">
-                    <MessageCircle className="w-5 h-5" />
-                    <span>{getCommentCount(post)}</span>
-                  </div>
-                </div>
+                </Link>
               </div>
-            </Link>
-          ))}
+            )
+          })}
         </div>
       )}
       

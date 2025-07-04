@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { X, ExternalLink } from 'lucide-react'
+import { X, ExternalLink, ImageIcon } from 'lucide-react'
 
 interface AdProps {
   category?: string
@@ -13,6 +13,59 @@ interface AdProps {
   size?: 'small' | 'medium' | 'large' | 'banner'
   closeable?: boolean
   adType?: 'adsense' | 'regular'
+}
+
+// 이미지 로딩 상태 처리를 위한 컴포넌트
+const AdImage = ({ src, alt, className }: { src: string; alt: string; className: string }) => {
+  const [imageLoaded, setImageLoaded] = useState(false)
+  const [imageError, setImageError] = useState(false)
+  const [isLoading, setIsLoading] = useState(true)
+
+  useEffect(() => {
+    if (src) {
+      const img = new Image()
+      img.onload = () => {
+        setImageLoaded(true)
+        setIsLoading(false)
+      }
+      img.onerror = () => {
+        setImageError(true)
+        setIsLoading(false)
+      }
+      img.src = src
+    } else {
+      setIsLoading(false)
+      setImageError(true)
+    }
+  }, [src])
+
+  if (isLoading) {
+    return (
+      <div className={`${className} bg-gray-200 flex items-center justify-center animate-pulse`}>
+        <ImageIcon className="w-6 h-6 text-gray-400" />
+      </div>
+    )
+  }
+
+  if (imageError || !src) {
+    return (
+      <div className={`${className} bg-gradient-to-br from-blue-100 to-purple-100 flex items-center justify-center`}>
+        <div className="text-center">
+          <ImageIcon className="w-8 h-8 text-blue-500 mx-auto mb-1" />
+          <span className="text-xs text-blue-600 font-medium">광고 이미지</span>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <img 
+      src={src} 
+      alt={alt}
+      className={`${className} object-cover`}
+      onError={() => setImageError(true)}
+    />
+  )
 }
 
 // 헬퍼 함수들을 컴포넌트 밖으로 이동
@@ -57,35 +110,14 @@ const Advertisement = ({
   closeable = false,
   adType = 'regular'
 }: AdProps) => {
+  // 모든 Hook을 최상단에 선언
   const [isVisible, setIsVisible] = useState(true)
   const [isClient, setIsClient] = useState(false)
+  const [realAdData, setRealAdData] = useState<any>(null)
+  const [loading, setLoading] = useState(true)
 
-  useEffect(() => {
-    setIsClient(true)
-  }, [])
-
-  if (!isVisible) return null
-
-  // 서버사이드에서는 기본 광고만 렌더링
-  if (!isClient) {
-    return (
-      <div className="relative w-full bg-white rounded-2xl shadow-sm border border-gray-100 h-32">
-        <div className="w-full h-full flex items-center justify-center">
-          <div className="text-center text-gray-400">
-            <div className="text-xs mb-1">광고</div>
-            <div className="text-sm font-medium">로딩 중...</div>
-          </div>
-        </div>
-      </div>
-    )
-  }
-
-  // 카테고리별 광고 데이터 가져오기
-  const getAdData = () => {
-    if (title && link) {
-      return { title, image, description, link }
-    }
-
+  // 기본 광고 데이터 함수를 최상단으로 이동
+  function getDefaultAdData() {
     const categoryAds: { [key: string]: any } = {
       creditStory: {
         title: '신용점수 상승 프로그램',
@@ -122,12 +154,140 @@ const Advertisement = ({
     return categoryAds[category || 'creditStory'] || categoryAds.creditStory
   }
 
-  const adData = getAdData()
+  useEffect(() => {
+    setIsClient(true)
+  }, [])
+
+  useEffect(() => {
+    const fetchRealAd = async () => {
+      try {
+        setLoading(true)
+        
+        // 사용자가 직접 props로 광고 데이터를 제공한 경우
+        if (title && link) {
+          setRealAdData({ title, image, description, link })
+          setLoading(false)
+          return
+        }
+
+        // 카테고리별 실제 광고 데이터를 API에서 가져오기
+        const categoryMap: { [key: string]: string } = {
+          creditStory: 'creditStory',
+          personalRecovery: 'personalRecoveryBankruptcy',
+          corporateRecovery: 'corporateRecoveryBankruptcy',
+          loanStory: 'loanInfo',
+          successStory: 'successStory',
+          exemptionCard: 'exemptionCardIssue',
+          exemptionCredit: 'exemptionCreditScore',
+          qa: 'qa',
+          news: 'news',
+          liveChat: 'liveChat'
+        }
+
+        const apiCategory = categoryMap[category || 'creditStory'] || 'creditStory'
+        const response = await fetch(`/api/ads?category=${apiCategory}&position=${position}&isActive=true`)
+        const data = await response.json()
+
+        if (response.ok && data.ads && data.ads.length > 0) {
+          // 랜덤하게 하나 선택
+          const randomAd = data.ads[Math.floor(Math.random() * data.ads.length)]
+          
+          setRealAdData({
+            title: randomAd.title,
+            image: randomAd.imageUrl,
+            description: randomAd.description,
+            link: randomAd.link,
+            id: randomAd.id
+          })
+
+          // 노출 수 증가
+          if (randomAd.id) {
+            fetch('/api/ads/track', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                adId: randomAd.id,
+                type: 'impression'
+              }),
+            }).catch(err => console.error('노출 추적 오류:', err))
+          }
+        } else {
+          // 실제 광고가 없으면 기본 광고 데이터 사용
+          setRealAdData(getDefaultAdData())
+        }
+      } catch (error) {
+        console.error('광고 데이터 로드 오류:', error)
+        setRealAdData(getDefaultAdData())
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchRealAd()
+  }, [category, position, title, link])
+
+  // 조건부 렌더링은 모든 Hook 이후에 처리
+  if (!isVisible) return null
+
+  // 서버사이드에서는 기본 광고만 렌더링
+  if (!isClient) {
+    return (
+      <div className="relative w-full bg-white rounded-2xl shadow-sm border border-gray-100 h-32">
+        <div className="w-full h-full flex items-center justify-center">
+          <div className="text-center text-gray-400">
+            <div className="text-xs mb-1">광고</div>
+            <div className="text-sm font-medium">로딩 중...</div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // 광고 클릭 처리
+  const handleAdClick = async (adData: any) => {
+    // 클릭 수 증가
+    if (adData.id) {
+      try {
+        await fetch('/api/ads/track', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            adId: adData.id,
+            type: 'click'
+          }),
+        })
+      } catch (error) {
+        console.error('클릭 추적 오류:', error)
+      }
+    }
+
+    // 광고 페이지로 이동
+    window.open(adData.link, '_blank')
+  }
+
+  const adData = realAdData
 
   const handleClick = () => {
-    if (adType !== 'adsense' && adData.link) {
-      window.open(adData.link, '_blank')
+    if (adType !== 'adsense' && adData?.link) {
+      handleAdClick(adData)
     }
+  }
+
+  // 로딩 중이거나 광고 데이터가 없는 경우
+  if (loading || !adData) {
+    return (
+      <div className={`relative ${getPositionClasses(position)} ${getSizeClasses(size)}`}>
+        <div className="w-full h-full flex items-center justify-center bg-gray-50 rounded-lg">
+          <div className="animate-pulse text-gray-400">
+            광고 로딩 중...
+          </div>
+        </div>
+      </div>
+    )
   }
 
   // 애드센스용 더미 광고
@@ -169,15 +329,11 @@ const Advertisement = ({
           onClick={handleClick}
         >
           {/* 이미지 */}
-          {adData.image && (
-            <div className="w-full h-48 bg-gray-200 rounded-t-2xl overflow-hidden">
-              <img 
-                src={adData.image} 
-                alt={adData.title}
-                className="w-full h-full object-cover"
-              />
-            </div>
-          )}
+          <AdImage 
+            src={adData.image} 
+            alt={adData.title}
+            className="w-full h-48 rounded-t-2xl"
+          />
 
           {/* 텍스트 콘텐츠 */}
           <div className="flex-1 p-4 flex flex-col justify-center">
@@ -235,47 +391,38 @@ const Advertisement = ({
         onClick={handleClick}
       >
         {/* 이미지가 있는 경우 */}
-        {adData.image && (
-          <div className={`flex-shrink-0 bg-gray-200 rounded-xl overflow-hidden ${
+        <AdImage 
+          src={adData.image} 
+          alt={adData.title}
+          className={`flex-shrink-0 rounded-xl ${
             size === 'small' ? 'w-16 h-16' : 'w-14 h-14'
-          }`}>
-            <img 
-              src={adData.image} 
-              alt={adData.title}
-              className="w-full h-full object-cover"
-            />
-          </div>
-        )}
+          }`}
+        />
 
         {/* 텍스트 콘텐츠 */}
         <div className="flex-1 min-w-0">
-          {size === 'small' ? (
-            // Small 사이즈: 한 줄로 제목과 설명을 나란히 배치
-            <div className="flex items-center space-x-2">
-              <h3 className="font-semibold text-gray-900 text-sm flex-shrink-0">
-                {adData.title}
-              </h3>
-              {adData.description && (
-                <p className="text-xs text-gray-600 truncate flex-1">
-                  {adData.description}
-                </p>
-              )}
-              <ExternalLink className="w-3 h-3 text-gray-400 flex-shrink-0" />
-            </div>
-          ) : (
-            // Medium/Large 사이즈: 기존 방식
-            <>
-              <h3 className="font-semibold text-gray-900 text-sm leading-tight mb-1 flex items-center">
-                <span className="truncate">{adData.title}</span>
-                <ExternalLink className="w-3 h-3 ml-2 text-gray-400 flex-shrink-0" />
-              </h3>
-              {adData.description && (
-                <p className="text-xs text-gray-600 leading-relaxed line-clamp-2">
-                  {adData.description}
-                </p>
-              )}
-            </>
+          <h3 className={`font-semibold text-gray-900 leading-tight mb-1 ${
+            size === 'small' ? 'text-sm' : 'text-base'
+          }`}>
+            {adData.title}
+          </h3>
+          {adData.description && (
+            <p className={`text-gray-600 leading-relaxed mb-2 ${
+              size === 'small' ? 'text-xs' : 'text-sm'
+            }`}>
+              {adData.description}
+            </p>
           )}
+          <div className="flex items-center">
+            <ExternalLink className={`text-gray-400 ${
+              size === 'small' ? 'w-3 h-3' : 'w-4 h-4'
+            }`} />
+            <span className={`text-gray-500 ml-1 ${
+              size === 'small' ? 'text-xs' : 'text-sm'
+            }`}>
+              자세히 보기
+            </span>
+          </div>
         </div>
       </div>
     </div>

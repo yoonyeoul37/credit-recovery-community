@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { 
   ArrowLeft, 
@@ -35,7 +35,7 @@ interface Ad {
   clickCount: number
   impressions: number
   createdAt: string
-  expiresAt: string
+  expiresAt: string | null
   nativeConfig?: {
     showEvery: number
     ctaText: string
@@ -60,96 +60,57 @@ interface AdFormData {
   }
 }
 
-export default function AdManagement() {
-  const [ads, setAds] = useState<Ad[]>([
-    {
-      id: 1,
-      title: '개인회생 전문 법무사 무료 상담',
-      description: '개인회생 성공률 95%! 24시간 무료 상담 가능',
-      imageUrl: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=300&h=200&fit=crop',
-      link: 'https://example.com/personal-recovery-law',
-      category: 'personalRecoveryBankruptcy',
-      adType: 'native',
-      position: 'native',
-      size: 'medium',
-      isActive: true,
-      clickCount: 456,
-      impressions: 12450,
-      createdAt: '2024-01-10',
-      expiresAt: '2024-02-10',
-      nativeConfig: {
-        showEvery: 4,
-        ctaText: '⚖️ 개인회생 전문 법무사 무료 상담받기 ▶',
-        backgroundColor: '#fef3c7'
-      }
-    },
-    {
-      id: 2,
-      title: '면책자 전용 신용카드 발급',
-      description: '면책 후 신용카드 발급률 90%! 전문 설계사 상담',
-      imageUrl: 'https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?w=300&h=200&fit=crop',
-      link: 'https://example.com/credit-card-recovery',
-      category: 'exemptionCardIssue',
-      adType: 'native',
-      position: 'native',
-      size: 'medium',
-      isActive: true,
-      clickCount: 789,
-      impressions: 15670,
-      createdAt: '2024-01-12',
-      expiresAt: '2024-02-12',
-      nativeConfig: {
-        showEvery: 3,
-        ctaText: '💳 면책자 전용 신용카드 바로 발급받기 ▶',
-        backgroundColor: '#dbeafe'
-      }
-    },
-    {
-      id: 3,
-      title: '신용불량자 대출 전문',
-      description: '면책자, 개인회생자도 OK! 비대면 당일 승인',
-      imageUrl: 'https://images.unsplash.com/photo-1579621970563-ebec7560ff3e?w=300&h=200&fit=crop',
-      link: 'https://example.com/loan-bad-credit',
-      category: 'loanInfo',
-      adType: 'native',
-      position: 'native',
-      size: 'medium',
-      isActive: true,
-      clickCount: 234,
-      impressions: 8900,
-      createdAt: '2024-01-08',
-      expiresAt: '2024-02-08',
-      nativeConfig: {
-        showEvery: 5,
-        ctaText: '💰 신용불량자 전용 대출 5분만에 신청하기 ▶',
-        backgroundColor: '#dcfce7'
-      }
-    },
-    {
-      id: 4,
-      title: '신용등급 관리 서비스',
-      description: '면책 후 신용등급 복구 전문! 1개월 무료 체험',
-      imageUrl: 'https://images.unsplash.com/photo-1554224155-6726b3ff858f?w=300&h=200&fit=crop',
-      link: 'https://example.com/credit-score-recovery',
-      category: 'exemptionCreditScore',
-      adType: 'native',
-      position: 'native',
-      size: 'medium',
-      isActive: true,
-      clickCount: 345,
-      impressions: 11200,
-      createdAt: '2024-01-15',
-      expiresAt: '2024-02-15',
-      nativeConfig: {
-        showEvery: 4,
-        ctaText: '📈 신용등급 무료 진단 + 관리 서비스 체험하기 ▶',
-        backgroundColor: '#f3e8ff'
-      }
-    }
-  ])
+// 기본 제공 이미지 갤러리
+const defaultImages = [
+  {
+    url: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=300&h=200&fit=crop',
+    category: '법무사',
+    description: '전문가 상담'
+  },
+  {
+    url: 'https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?w=300&h=200&fit=crop',
+    category: '신용카드',
+    description: '카드 발급'
+  },
+  {
+    url: 'https://images.unsplash.com/photo-1579621970563-ebec7560ff3e?w=300&h=200&fit=crop',
+    category: '대출',
+    description: '대출 상담'
+  },
+  {
+    url: 'https://images.unsplash.com/photo-1554224155-6726b3ff858f?w=300&h=200&fit=crop',
+    category: '신용관리',
+    description: '신용점수 관리'
+  },
+  {
+    url: 'https://images.unsplash.com/photo-1589829545856-d10d557cf95f?w=300&h=200&fit=crop',
+    category: '법률상담',
+    description: '법률 서비스'
+  },
+  {
+    url: 'https://images.unsplash.com/photo-1560472354-b33ff0c44a43?w=300&h=200&fit=crop',
+    category: '비즈니스',
+    description: '사업 재건'
+  },
+  {
+    url: 'https://images.unsplash.com/photo-1519452634265-7b808fcb3be2?w=300&h=200&fit=crop',
+    category: '성공',
+    description: '성공 사례'
+  },
+  {
+    url: 'https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?w=300&h=200&fit=crop',
+    category: '금융',
+    description: '금융 서비스'
+  }
+]
 
+export default function AdManagement() {
+  const [ads, setAds] = useState<Ad[]>([])
+  const [loading, setLoading] = useState(true)
   const [showAddModal, setShowAddModal] = useState(false)
   const [editingAd, setEditingAd] = useState<Ad | null>(null)
+  const [showImageGallery, setShowImageGallery] = useState(false)
+  const [uploading, setUploading] = useState(false)
   const [formData, setFormData] = useState<AdFormData>({
     title: '',
     description: '',
@@ -167,53 +128,248 @@ export default function AdManagement() {
     }
   })
 
-  const toggleAdStatus = (id: number) => {
-    setAds(ads.map(ad => 
-      ad.id === id ? { ...ad, isActive: !ad.isActive } : ad
-    ))
-  }
-
-  const deleteAd = (id: number) => {
-    if (confirm('정말로 이 광고를 삭제하시겠습니까?')) {
-      setAds(ads.filter(ad => ad.id !== id))
+  // 광고 목록 조회
+  const fetchAds = async () => {
+    try {
+      setLoading(true)
+      const response = await fetch('/api/ads')
+      const data = await response.json()
+      
+      if (response.ok) {
+        setAds(data.ads || [])
+      } else {
+        console.error('광고 조회 실패:', data.error)
+        alert('광고 목록을 불러오는데 실패했습니다.')
+      }
+    } catch (error) {
+      console.error('광고 조회 오류:', error)
+      alert('광고 목록을 불러오는데 오류가 발생했습니다.')
+    } finally {
+      setLoading(false)
     }
   }
 
-  const handleAddAd = () => {
-    if (!formData.title || !formData.description || !formData.link) {
+  // 컴포넌트 마운트 시 광고 목록 조회
+  useEffect(() => {
+    fetchAds()
+  }, [])
+
+  // 파일 업로드 핸들러
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (!file) return
+
+    console.log('📁 파일 업로드 시작:', {
+      fileName: file.name,
+      fileSize: file.size,
+      fileType: file.type,
+      fileSizeMB: (file.size / (1024 * 1024)).toFixed(2)
+    })
+
+    // 이미지 파일 검증
+    if (!file.type.startsWith('image/')) {
+      console.error('❌ 잘못된 파일 타입:', file.type)
+      alert('이미지 파일만 업로드 가능합니다.')
+      return
+    }
+
+    // 파일 크기 검증 (5MB 제한)
+    if (file.size > 5 * 1024 * 1024) {
+      console.error('❌ 파일 크기 초과:', { size: file.size, maxSize: 5 * 1024 * 1024 })
+      alert('파일 크기는 5MB 이하여야 합니다.')
+      return
+    }
+
+    console.log('✅ 파일 검증 통과, Base64 변환 시작...')
+    setUploading(true)
+
+    try {
+      // FileReader를 사용해서 base64로 변환
+      const reader = new FileReader()
+      reader.onload = (e) => {
+        const base64 = e.target?.result as string
+        console.log('✅ Base64 변환 완료:', {
+          base64Length: base64.length,
+          estimatedSizeKB: (base64.length * 0.75 / 1024).toFixed(2),
+          prefix: base64.substring(0, 50) + '...'
+        })
+        setFormData({...formData, imageUrl: base64})
+        setUploading(false)
+      }
+      reader.onerror = (error) => {
+        console.error('❌ 파일 읽기 실패:', error)
+        alert('파일 읽기에 실패했습니다.')
+        setUploading(false)
+      }
+      reader.readAsDataURL(file)
+    } catch (error) {
+      console.error('❌ 파일 업로드 오류:', error)
+      alert('파일 업로드에 실패했습니다.')
+      setUploading(false)
+    }
+  }
+
+  // 이미지 선택 핸들러
+  const selectImage = (imageUrl: string) => {
+    setFormData({...formData, imageUrl})
+    setShowImageGallery(false)
+  }
+
+  // 이미지 미리보기 컴포넌트
+  const ImagePreview = ({ url, alt = "광고 이미지" }: { url: string; alt?: string }) => {
+    const [imageLoaded, setImageLoaded] = useState(false)
+    const [imageError, setImageError] = useState(false)
+
+    if (imageError || !url) {
+      return (
+        <div className="w-full h-32 bg-gradient-to-br from-gray-100 to-gray-200 rounded-lg flex items-center justify-center">
+          <div className="text-center">
+            <Image className="w-8 h-8 text-gray-400 mx-auto mb-1" />
+            <span className="text-xs text-gray-500">이미지 없음</span>
+          </div>
+        </div>
+      )
+    }
+
+    return (
+      <div className="relative w-full h-32 bg-gray-100 rounded-lg overflow-hidden">
+        {!imageLoaded && (
+          <div className="absolute inset-0 flex items-center justify-center">
+            <div className="animate-spin rounded-full h-6 w-6 border-2 border-gray-300 border-t-blue-600"></div>
+          </div>
+        )}
+        <img
+          src={url}
+          alt={alt}
+          className={`w-full h-full object-cover transition-opacity duration-200 ${
+            imageLoaded ? 'opacity-100' : 'opacity-0'
+          }`}
+          onLoad={() => setImageLoaded(true)}
+          onError={() => setImageError(true)}
+        />
+      </div>
+    )
+  }
+
+  const toggleAdStatus = async (id: number) => {
+    const ad = ads.find(ad => ad.id === id)
+    if (!ad) return
+
+    try {
+      const response = await fetch('/api/ads', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          id: ad.id,
+          isActive: !ad.isActive
+        })
+      })
+
+      if (response.ok) {
+        setAds(ads.map(a => 
+          a.id === id ? { ...a, isActive: !a.isActive } : a
+        ))
+      } else {
+        alert('광고 상태 변경에 실패했습니다.')
+      }
+    } catch (error) {
+      console.error('광고 상태 변경 오류:', error)
+      alert('광고 상태 변경 중 오류가 발생했습니다.')
+    }
+  }
+
+  const handleAddAd = async () => {
+    if (!formData.title || !formData.description || !formData.imageUrl) {
       alert('필수 항목을 모두 입력해주세요.')
       return
     }
 
-    const newAd: Ad = {
-      id: Math.max(...ads.map(ad => ad.id)) + 1,
-      ...formData,
-      isActive: true,
-      clickCount: 0,
-      impressions: 0,
-      createdAt: new Date().toISOString().split('T')[0]
-    }
+    try {
+      const response = await fetch('/api/ads', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          ...formData,
+          isActive: true
+        })
+      })
 
-    setAds([...ads, newAd])
-    setShowAddModal(false)
-    resetForm()
-    alert('광고가 성공적으로 추가되었습니다!')
+      if (response.ok) {
+        await fetchAds() // 목록 새로고침
+        setShowAddModal(false)
+        resetForm()
+        alert('광고가 성공적으로 추가되었습니다.')
+      } else {
+        const data = await response.json()
+        alert(`광고 추가에 실패했습니다: ${data.error}`)
+      }
+    } catch (error) {
+      console.error('광고 추가 오류:', error)
+      alert('광고 추가 중 오류가 발생했습니다.')
+    }
   }
 
-  const handleEditAd = () => {
-    if (!editingAd || !formData.title || !formData.description || !formData.link) {
+  const handleEditAd = async () => {
+    if (!editingAd || !formData.title || !formData.description || !formData.imageUrl) {
       alert('필수 항목을 모두 입력해주세요.')
       return
     }
 
-    setAds(ads.map(ad => 
-      ad.id === editingAd.id 
-        ? { ...ad, ...formData }
-        : ad
-    ))
-    setEditingAd(null)
-    resetForm()
-    alert('광고가 성공적으로 수정되었습니다!')
+    try {
+      const response = await fetch('/api/ads', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          id: editingAd.id,
+          ...formData
+        })
+      })
+
+      if (response.ok) {
+        await fetchAds() // 목록 새로고침
+        setEditingAd(null)
+        resetForm()
+        alert('광고가 성공적으로 수정되었습니다.')
+      } else {
+        const data = await response.json()
+        alert(`광고 수정에 실패했습니다: ${data.error}`)
+      }
+    } catch (error) {
+      console.error('광고 수정 오류:', error)
+      alert('광고 수정 중 오류가 발생했습니다.')
+    }
+  }
+
+  const handleDeleteAd = async (adId: number) => {
+    if (!confirm('정말로 이 광고를 삭제하시겠습니까?')) {
+      return
+    }
+
+    try {
+      const response = await fetch('/api/ads', {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ id: adId })
+      })
+
+      if (response.ok) {
+        setAds(ads.filter(ad => ad.id !== adId))
+        alert('광고가 성공적으로 삭제되었습니다.')
+      } else {
+        alert('광고 삭제에 실패했습니다.')
+      }
+    } catch (error) {
+      console.error('광고 삭제 오류:', error)
+      alert('광고 삭제 중 오류가 발생했습니다.')
+    }
   }
 
   const resetForm = () => {
@@ -238,15 +394,15 @@ export default function AdManagement() {
   const openEditModal = (ad: Ad) => {
     setEditingAd(ad)
     setFormData({
-      title: ad.title,
-      description: ad.description,
-      imageUrl: ad.imageUrl,
-      link: ad.link,
-      category: ad.category,
-      adType: ad.adType,
-      position: ad.position,
-      size: ad.size,
-      expiresAt: ad.expiresAt,
+      title: ad.title || '',
+      description: ad.description || '',
+      imageUrl: ad.imageUrl || '',
+      link: ad.link || '',
+      category: ad.category || 'personalRecoveryBankruptcy',
+      adType: ad.adType || 'native',
+      position: ad.position || 'native',
+      size: ad.size || 'medium',
+      expiresAt: ad.expiresAt || '',
       nativeConfig: ad.nativeConfig || {
         showEvery: 4,
         ctaText: '',
@@ -407,400 +563,423 @@ export default function AdManagement() {
             </div>
 
             <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      광고 정보
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      카테고리 / 타입
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      성과
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      상태
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      작업
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {ads.map((ad) => (
-                    <tr key={ad.id} className={!ad.isActive ? 'opacity-60' : ''}>
-                      <td className="px-6 py-4">
-                        <div className="flex items-start space-x-3">
-                          {ad.imageUrl && (
-                            <img 
-                              src={ad.imageUrl} 
-                              alt={ad.title}
-                              className="w-16 h-12 object-cover rounded"
-                            />
-                          )}
-                          <div className="flex-1 min-w-0">
-                            <div className="text-sm font-medium text-gray-900 truncate">
-                              {ad.title}
+              {loading ? (
+                <div className="flex items-center justify-center py-12">
+                  <div className="animate-spin rounded-full h-8 w-8 border-2 border-blue-300 border-t-blue-600"></div>
+                  <span className="ml-3 text-gray-600">광고 목록을 불러오는 중...</span>
+                </div>
+              ) : ads.length === 0 ? (
+                <div className="text-center py-12">
+                  <div className="text-gray-400 mb-4">
+                    <Image className="w-16 h-16 mx-auto mb-4" />
+                    <p className="text-xl font-medium text-gray-900 mb-2">등록된 광고가 없습니다</p>
+                    <p className="text-gray-500">첫 번째 광고를 등록해보세요!</p>
+                  </div>
+                  <button
+                    onClick={() => setShowAddModal(true)}
+                    className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                  >
+                    <Plus className="w-4 h-4 mr-2" />
+                    첫 광고 등록하기
+                  </button>
+                </div>
+              ) : (
+                <table className="w-full">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        광고 정보
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        타입/카테고리
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        성과
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        상태
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        작업
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {ads.map((ad) => (
+                      <tr key={ad.id} className="hover:bg-gray-50">
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="flex items-center">
+                            <div className="flex-shrink-0 w-16 h-16 mr-4">
+                              <ImagePreview url={ad.imageUrl} />
                             </div>
-                            <div className="text-sm text-gray-500 mt-1">
-                              {ad.description}
+                            <div>
+                              <div className="text-sm font-medium text-gray-900">{ad.title}</div>
+                              <div className="text-sm text-gray-500">{ad.description}</div>
+                              {ad.link && (
+                                <div className="text-xs text-blue-600 mt-1">
+                                  <ExternalLink className="w-3 h-3 inline mr-1" />
+                                  {ad.link}
+                                </div>
+                              )}
                             </div>
-                            {ad.adType === 'native' && ad.nativeConfig && (
-                              <div className="text-xs text-blue-600 mt-1 p-2 bg-blue-50 rounded">
-                                📝 {ad.nativeConfig.ctaText}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="text-sm text-gray-900">
+                            <div className="font-medium">{getAdTypeName(ad.adType)}</div>
+                            <div className="text-gray-500">{getCategoryName(ad.category)}</div>
+                            <div className="text-xs text-gray-400">{getPositionName(ad.position)} | {getSizeName(ad.size)}</div>
+                            {ad.nativeConfig && (
+                              <div className="text-xs text-blue-600 mt-1">
+                                {ad.nativeConfig.showEvery}개마다 표시
                               </div>
                             )}
                           </div>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="text-sm">
-                          <div className="font-medium text-gray-900">
-                            {getCategoryName(ad.category)}
-                          </div>
-                          <div className="text-gray-500">
-                            {getAdTypeName(ad.adType)}
-                          </div>
-                          {ad.adType === 'native' && ad.nativeConfig && (
-                            <div className="text-xs text-orange-600 mt-1">
-                              {ad.nativeConfig.showEvery}개 글마다 표시
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="text-sm text-gray-900">
+                            <div className="flex items-center mb-1">
+                              <Monitor className="w-4 h-4 mr-1 text-blue-500" />
+                              <span className="font-medium">{ad.impressions.toLocaleString()}</span>
+                              <span className="text-gray-500 ml-1">조회</span>
                             </div>
-                          )}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="text-sm">
-                          <div className="text-gray-900">
-                            클릭: <span className="font-medium">{ad.clickCount.toLocaleString()}</span>
+                            <div className="flex items-center">
+                              <ExternalLink className="w-4 h-4 mr-1 text-green-500" />
+                              <span className="font-medium">{ad.clickCount.toLocaleString()}</span>
+                              <span className="text-gray-500 ml-1">클릭</span>
+                            </div>
                           </div>
-                          <div className="text-gray-500">
-                            노출: {ad.impressions.toLocaleString()}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="flex items-center">
+                            <button
+                              onClick={() => toggleAdStatus(ad.id)}
+                              className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium transition-colors ${
+                                ad.isActive 
+                                  ? 'bg-green-100 text-green-800 hover:bg-green-200' 
+                                  : 'bg-gray-100 text-gray-800 hover:bg-gray-200'
+                              }`}
+                            >
+                              {ad.isActive ? (
+                                <>
+                                  <Eye className="w-3 h-3 mr-1" />
+                                  활성
+                                </>
+                              ) : (
+                                <>
+                                  <EyeOff className="w-3 h-3 mr-1" />
+                                  비활성
+                                </>
+                              )}
+                            </button>
                           </div>
-                          <div className="text-xs text-blue-600">
-                            CTR: {ad.impressions > 0 ? ((ad.clickCount / ad.impressions) * 100).toFixed(2) : 0}%
+                          <div className="text-xs text-gray-500 mt-1">
+                            <Calendar className="w-3 h-3 inline mr-1" />
+                            {new Date(ad.createdAt).toLocaleDateString()}
                           </div>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <button
-                          onClick={() => toggleAdStatus(ad.id)}
-                          className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium transition-colors ${
-                            ad.isActive
-                              ? 'bg-green-100 text-green-800 hover:bg-green-200'
-                              : 'bg-gray-100 text-gray-800 hover:bg-gray-200'
-                          }`}
-                        >
-                          {ad.isActive ? (
-                            <>
-                              <Eye className="w-3 h-3 mr-1" />
-                              활성
-                            </>
-                          ) : (
-                            <>
-                              <EyeOff className="w-3 h-3 mr-1" />
-                              비활성
-                            </>
-                          )}
-                        </button>
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="flex items-center space-x-2">
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
                           <button
                             onClick={() => openEditModal(ad)}
-                            className="text-blue-600 hover:text-blue-800 p-1 rounded hover:bg-blue-50 transition-colors"
-                            title="수정"
+                            className="text-blue-600 hover:text-blue-900 transition-colors"
                           >
                             <Edit className="w-4 h-4" />
                           </button>
                           <button
-                            onClick={() => deleteAd(ad.id)}
-                            className="text-red-600 hover:text-red-800 p-1 rounded hover:bg-red-50 transition-colors"
-                            title="삭제"
+                            onClick={() => handleDeleteAd(ad.id)}
+                            className="text-red-600 hover:text-red-900 transition-colors"
                           >
                             <Trash2 className="w-4 h-4" />
                           </button>
-                          {ad.link && (
-                            <a
-                              href={ad.link}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-gray-600 hover:text-gray-800 p-1 rounded hover:bg-gray-50 transition-colors"
-                              title="링크 확인"
-                            >
-                              <ExternalLink className="w-4 h-4" />
-                            </a>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
             </div>
           </div>
         </div>
       </div>
 
+      {/* 광고 추가/수정 모달 */}
       {(showAddModal || editingAd) && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="px-6 py-4 border-b border-gray-200">
-              <div className="flex items-center justify-between">
-                <h3 className="text-lg font-semibold text-gray-900">
-                  {editingAd ? '광고 수정' : '새 광고 추가'}
-                </h3>
-                <button
-                  onClick={closeModal}
-                  className="text-gray-400 hover:text-gray-600"
-                >
-                  <X className="w-6 h-6" />
-                </button>
-              </div>
+            <div className="flex items-center justify-between p-6 border-b border-gray-200">
+              <h2 className="text-xl font-semibold text-gray-900">
+                {editingAd ? '광고 수정' : '새 광고 추가'}
+              </h2>
+              <button
+                onClick={closeModal}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X className="w-6 h-6" />
+              </button>
             </div>
             
-            <div className="px-6 py-6 space-y-6">
-              <div className="grid grid-cols-1 gap-6">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    광고 제목 *
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.title}
-                    onChange={(e) => setFormData({...formData, title: e.target.value})}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    placeholder="예: 개인회생 전문 법무사 무료 상담"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    광고 설명 *
-                  </label>
-                  <textarea
-                    value={formData.description}
-                    onChange={(e) => setFormData({...formData, description: e.target.value})}
-                    rows={3}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    placeholder="예: 개인회생 성공률 95%! 24시간 무료 상담 가능"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    광고 링크 *
-                  </label>
-                  <input
-                    type="url"
-                    value={formData.link}
-                    onChange={(e) => setFormData({...formData, link: e.target.value})}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    placeholder="https://example.com"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    이미지 URL
-                  </label>
-                  <input
-                    type="url"
-                    value={formData.imageUrl}
-                    onChange={(e) => setFormData({...formData, imageUrl: e.target.value})}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    placeholder="https://example.com/image.jpg"
-                  />
-                </div>
+            <div className="p-6 space-y-6">
+              {/* 광고 제목 */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  광고 제목 *
+                </label>
+                <input
+                  type="text"
+                  value={formData.title}
+                  onChange={(e) => setFormData({...formData, title: e.target.value})}
+                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="광고 제목을 입력하세요"
+                />
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    타겟 카테고리 *
-                  </label>
-                  <select
-                    value={formData.category}
-                    onChange={(e) => setFormData({...formData, category: e.target.value})}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  >
-                    <option value="personalRecoveryBankruptcy">개인회생파산 (법무사 광고)</option>
-                    <option value="corporateRecoveryBankruptcy">법인회생파산 (법인 법무사 광고)</option>
-                    <option value="exemptionCardIssue">면책후카드발급 (신용카드 광고)</option>
-                    <option value="exemptionCreditScore">면책후신용등급 (신용관리 광고)</option>
-                    <option value="creditRecoveryWorkout">신용회복워크아웃 (상담 광고)</option>
-                    <option value="loanInfo">대출정보 (대출회사 광고)</option>
-                    <option value="creditStory">신용이야기 (신용카드 광고)</option>
-                    <option value="qa">Q&A (법무사 광고)</option>
-                    <option value="news">뉴스 (금융정보 광고)</option>
-                    <option value="successStory">성공후기</option>
-                    <option value="liveChat">실시간채팅</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    광고 타입 *
-                  </label>
-                  <select
-                    value={formData.adType}
-                    onChange={(e) => {
-                      const adType = e.target.value as 'banner' | 'sidebar' | 'native'
-                      setFormData({
-                        ...formData, 
-                        adType,
-                        position: adType === 'native' ? 'native' : formData.position
-                      })
-                    }}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  >
-                    <option value="native">네이티브 광고 (게시글 목록 삽입) - 추천!</option>
-                    <option value="banner">배너 광고</option>
-                    <option value="sidebar">사이드바 광고</option>
-                  </select>
-                </div>
+              {/* 광고 설명 */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  광고 설명 *
+                </label>
+                <textarea
+                  value={formData.description}
+                  onChange={(e) => setFormData({...formData, description: e.target.value})}
+                  rows={3}
+                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="광고 설명을 입력하세요"
+                />
               </div>
 
-              {formData.adType === 'native' && (
-                <div className="bg-blue-50 p-4 rounded-lg space-y-4">
-                  <h4 className="font-medium text-blue-900">네이티브 광고 설정</h4>
+              {/* 이미지 업로드 섹션 */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  광고 이미지 *
+                </label>
+                <div className="space-y-4">
+                  {formData.imageUrl && (
+                    <div className="w-full">
+                      <ImagePreview url={formData.imageUrl} />
+                    </div>
+                  )}
                   
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="flex flex-col sm:flex-row gap-3">
+                    <div className="flex-1">
+                      <label className="block w-full cursor-pointer">
+                        <div className="w-full p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-400 text-center">
+                          <Upload className="w-8 h-8 mx-auto mb-2 text-gray-400" />
+                          <span className="text-sm text-gray-600">
+                            {uploading ? '업로드 중...' : '이미지 파일 업로드'}
+                          </span>
+                        </div>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={handleFileUpload}
+                          className="hidden"
+                          disabled={uploading}
+                        />
+                      </label>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setShowImageGallery(true)}
+                      className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
+                    >
+                      <Image className="w-4 h-4 inline mr-2" />
+                      갤러리에서 선택
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* 링크 URL */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  링크 URL
+                </label>
+                <input
+                  type="url"
+                  value={formData.link}
+                  onChange={(e) => setFormData({...formData, link: e.target.value})}
+                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="https://example.com"
+                />
+              </div>
+
+              {/* 카테고리 */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  카테고리
+                </label>
+                <select
+                  value={formData.category}
+                  onChange={(e) => setFormData({...formData, category: e.target.value})}
+                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                >
+                  <option value="personalRecoveryBankruptcy">개인회생파산</option>
+                  <option value="corporateRecoveryBankruptcy">법인회생파산</option>
+                  <option value="exemptionCardIssue">면책후카드발급</option>
+                  <option value="exemptionCreditScore">면책후신용등급</option>
+                  <option value="creditRecoveryWorkout">신용회복워크아웃</option>
+                  <option value="loanInfo">대출정보</option>
+                  <option value="creditStory">신용이야기</option>
+                  <option value="qa">Q&A</option>
+                  <option value="news">뉴스</option>
+                  <option value="successStory">성공후기</option>
+                  <option value="liveChat">실시간채팅</option>
+                </select>
+              </div>
+
+              {/* 광고 타입 */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  광고 타입
+                </label>
+                <select
+                  value={formData.adType}
+                  onChange={(e) => setFormData({...formData, adType: e.target.value as 'banner' | 'sidebar' | 'native'})}
+                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                >
+                  <option value="native">네이티브 광고 (게시글 목록 삽입)</option>
+                  <option value="banner">배너 광고</option>
+                  <option value="sidebar">사이드바 광고</option>
+                </select>
+              </div>
+
+              {/* 네이티브 광고 설정 */}
+              {formData.adType === 'native' && (
+                <div className="bg-blue-50 p-4 rounded-lg">
+                  <h3 className="text-sm font-medium text-blue-900 mb-3">네이티브 광고 설정</h3>
+                  <div className="space-y-4">
                     <div>
                       <label className="block text-sm font-medium text-blue-700 mb-2">
-                        표시 간격 (몇 개 게시글마다)
+                        표시 주기 (게시글 몇 개마다 표시?)
                       </label>
-                      <select
+                      <input
+                        type="number"
+                        min="1"
+                        max="20"
                         value={formData.nativeConfig?.showEvery || 4}
                         onChange={(e) => setFormData({
-                          ...formData, 
+                          ...formData,
                           nativeConfig: {
-                            ...formData.nativeConfig!,
-                            showEvery: parseInt(e.target.value)
+                            ...formData.nativeConfig,
+                            showEvery: parseInt(e.target.value) || 4,
+                            ctaText: formData.nativeConfig?.ctaText || '',
+                            backgroundColor: formData.nativeConfig?.backgroundColor || '#dbeafe'
                           }
                         })}
-                        className="w-full px-3 py-2 border border-blue-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                      >
-                        <option value={3}>3개 게시글마다</option>
-                        <option value={4}>4개 게시글마다</option>
-                        <option value={5}>5개 게시글마다</option>
-                        <option value={6}>6개 게시글마다</option>
-                      </select>
+                        className="w-full p-3 border border-blue-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      />
                     </div>
-
                     <div>
                       <label className="block text-sm font-medium text-blue-700 mb-2">
-                        배경색
+                        CTA 텍스트
                       </label>
-                      <select
+                      <input
+                        type="text"
+                        value={formData.nativeConfig?.ctaText || ''}
+                        onChange={(e) => setFormData({
+                          ...formData,
+                          nativeConfig: {
+                            ...formData.nativeConfig,
+                            showEvery: formData.nativeConfig?.showEvery || 4,
+                            ctaText: e.target.value,
+                            backgroundColor: formData.nativeConfig?.backgroundColor || '#dbeafe'
+                          }
+                        })}
+                        className="w-full p-3 border border-blue-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        placeholder="자세히 보기"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-blue-700 mb-2">
+                        배경 색상
+                      </label>
+                      <input
+                        type="color"
                         value={formData.nativeConfig?.backgroundColor || '#dbeafe'}
                         onChange={(e) => setFormData({
-                          ...formData, 
+                          ...formData,
                           nativeConfig: {
-                            ...formData.nativeConfig!,
+                            ...formData.nativeConfig,
+                            showEvery: formData.nativeConfig?.showEvery || 4,
+                            ctaText: formData.nativeConfig?.ctaText || '',
                             backgroundColor: e.target.value
                           }
                         })}
-                        className="w-full px-3 py-2 border border-blue-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                      >
-                        <option value="#dbeafe">파란색 (신용카드)</option>
-                        <option value="#fef3c7">노란색 (법무사)</option>
-                        <option value="#dcfce7">초록색 (대출)</option>
-                        <option value="#f3e8ff">보라색 (신용관리)</option>
-                        <option value="#fee2e2">빨간색 (긴급)</option>
-                      </select>
+                        className="w-full h-12 border border-blue-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      />
                     </div>
                   </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-blue-700 mb-2">
-                      클릭 유도 텍스트 (CTA) *
-                    </label>
-                    <input
-                      type="text"
-                      value={formData.nativeConfig?.ctaText || ''}
-                      onChange={(e) => setFormData({
-                        ...formData, 
-                        nativeConfig: {
-                          ...formData.nativeConfig!,
-                          ctaText: e.target.value
-                        }
-                      })}
-                      className="w-full px-3 py-2 border border-blue-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                      placeholder="예: 💳 면책자 전용 신용카드 바로 발급받기 ▶"
-                    />
-                    <p className="text-xs text-blue-600 mt-1">
-                      �� 이모지와 화살표(▶)를 사용하면 클릭률이 높아집니다!
-                    </p>
-                  </div>
-
-                  {formData.nativeConfig?.ctaText && (
-                    <div className="border border-blue-200 rounded-lg p-3">
-                      <p className="text-sm font-medium text-blue-700 mb-2">미리보기:</p>
-                      <div 
-                        className="p-3 rounded-lg cursor-pointer hover:opacity-80 transition-opacity"
-                        style={{ backgroundColor: formData.nativeConfig.backgroundColor }}
-                      >
-                        <div className="flex items-center justify-between">
-                          <div className="flex-1">
-                            <span className="text-xs bg-red-100 text-red-800 px-2 py-1 rounded-full mr-2">
-                              [광고]
-                            </span>
-                            <span className="text-sm font-medium text-gray-900">
-                              {formData.nativeConfig.ctaText}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  )}
                 </div>
               )}
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    광고 크기
-                  </label>
-                  <select
-                    value={formData.size}
-                    onChange={(e) => setFormData({...formData, size: e.target.value as any})}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  >
-                    <option value="small">소형</option>
-                    <option value="medium">중형</option>
-                    <option value="large">대형</option>
-                    <option value="banner">배너</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    만료일
-                  </label>
-                  <input
-                    type="date"
-                    value={formData.expiresAt}
-                    onChange={(e) => setFormData({...formData, expiresAt: e.target.value})}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  />
-                </div>
+              {/* 만료일 */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  만료일 (선택사항)
+                </label>
+                <input
+                  type="date"
+                  value={formData.expiresAt}
+                  onChange={(e) => setFormData({...formData, expiresAt: e.target.value})}
+                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                />
               </div>
             </div>
 
-            <div className="px-6 py-4 border-t border-gray-200 flex justify-end space-x-3">
+            <div className="flex justify-end space-x-3 p-6 border-t border-gray-200">
               <button
                 onClick={closeModal}
-                className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+                className="px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors"
               >
                 취소
               </button>
               <button
                 onClick={editingAd ? handleEditAd : handleAddAd}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
               >
-                {editingAd ? '수정 완료' : '광고 추가'}
+                {editingAd ? '수정' : '추가'}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 이미지 갤러리 모달 */}
+      {showImageGallery && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between p-6 border-b border-gray-200">
+              <h2 className="text-xl font-semibold text-gray-900">이미지 갤러리</h2>
+              <button
+                onClick={() => setShowImageGallery(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+            
+            <div className="p-6">
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                {defaultImages.map((image, index) => (
+                  <div 
+                    key={index} 
+                    className="cursor-pointer group border rounded-lg overflow-hidden hover:shadow-lg transition-shadow"
+                    onClick={() => selectImage(image.url)}
+                  >
+                    <div className="aspect-video bg-gray-100">
+                      <img 
+                        src={image.url} 
+                        alt={image.description}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                      />
+                    </div>
+                    <div className="p-3">
+                      <div className="text-sm font-medium text-gray-900">{image.category}</div>
+                      <div className="text-xs text-gray-500">{image.description}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         </div>

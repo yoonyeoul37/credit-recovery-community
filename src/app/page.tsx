@@ -365,8 +365,9 @@ export default function HomePage() {
   }, [isNoticeModalOpen])
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-green-50">
+    <div className="bg-gradient-to-br from-blue-50 via-white to-green-50 min-h-screen">
       <DynamicTitle />
+      
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* 히어로 섹션 */}
         <div className="text-center mb-16">
@@ -583,8 +584,6 @@ export default function HomePage() {
           ))}
         </div>
 
-
-
         {/* 커뮤니티 통계 */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-16">
           {displayStats.map((stat, index) => (
@@ -621,46 +620,43 @@ export default function HomePage() {
                       <div className="h-4 bg-gray-200 rounded w-1/2"></div>
                     </div>
                   </div>
-                  {i < 3 && <hr className="my-6 border-gray-100" />}
                 </div>
               ))}
             </div>
           ) : chatQuestions.length > 0 ? (
-            <div className="grid gap-6">
+            <div className="space-y-6">
               {chatQuestions.map((question, index) => (
                 <div key={question.id} className="group">
-                  <div className="flex items-start space-x-4">
-                    <div className="flex-1">
-                      <div className="flex items-center space-x-2 mb-3">
-                        <span className="bg-blue-100 text-blue-800 text-xs font-medium px-2 py-1 rounded-full">
-                          {question.roomName}
-                        </span>
-                        <span className="text-xs text-gray-500">
-                          {formatMainPageTime(question.created_at)}
-                        </span>
+                  <div className="bg-gray-50 rounded-2xl p-6 hover:bg-gray-100 transition-colors">
+                    <div className="flex items-center justify-between mb-3">
+                      <span className="inline-flex items-center px-3 py-1 bg-blue-100 text-blue-800 text-sm font-medium rounded-full">
+                        💬 {getRoomName(question.room_id)}
+                      </span>
+                      <span className="text-xs text-gray-500">
+                        {formatMainPageTime(question.created_at)}
+                      </span>
+                    </div>
+                    
+                    <Link
+                      href={`/live-chat?room=${question.room_id}`}
+                      className="text-lg font-semibold text-gray-900 mb-2 hover:text-blue-600 cursor-pointer block group-hover:text-blue-600 transition-colors"
+                    >
+                      {question.message.length > 80 
+                        ? question.message.substring(0, 80) + '...' 
+                        : question.message}
+                    </Link>
+                    
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-4 text-sm text-gray-500">
+                        <span className="font-medium text-green-700">💚 {question.user_nickname}</span>
                       </div>
-                      
                       <Link
                         href={`/live-chat?room=${question.room_id}`}
-                        className="text-lg font-semibold text-gray-900 mb-2 hover:text-blue-600 cursor-pointer block group-hover:text-blue-600 transition-colors"
+                        className="flex items-center text-sm text-blue-600 hover:text-blue-700 transition-colors cursor-pointer group"
                       >
-                        {question.message.length > 80 
-                          ? question.message.substring(0, 80) + '...' 
-                          : question.message}
+                        <MessageCircle className="w-4 h-4 mr-1 group-hover:scale-110 transition-transform" />
+                        <span className="group-hover:underline">답변하러 가기</span>
                       </Link>
-                      
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center space-x-4 text-sm text-gray-500">
-                          <span className="font-medium text-green-700">💚 {question.user_nickname}</span>
-                        </div>
-                        <Link
-                          href={`/live-chat?room=${question.room_id}`}
-                          className="flex items-center text-sm text-blue-600 hover:text-blue-700 transition-colors cursor-pointer group"
-                        >
-                          <MessageCircle className="w-4 h-4 mr-1 group-hover:scale-110 transition-transform" />
-                          <span className="group-hover:underline">답변하러 가기</span>
-                        </Link>
-                      </div>
                     </div>
                   </div>
                   

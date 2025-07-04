@@ -584,39 +584,47 @@ export default function CorporateRecoveryPage() {
                     </div>
                   </Link>
 
-                  {/* 5번째 게시글 후에 네이티브 광고 표시 */}
-                  {(index + 1) === 5 && selectedAd && (
-                    <div className="bg-gradient-to-r from-yellow-50 to-orange-50 rounded-lg p-6 border-2 border-dashed border-yellow-200 hover:shadow-lg transition-all cursor-pointer mt-4"
-                         onClick={() => handleAdClick(selectedAd)}>
+                  {/* 네이티브 광고 - 5개 게시글마다 1개씩 표시 */}
+                  {(index + 1) % 5 === 0 && (
+                    <div className="bg-gradient-to-r from-purple-50 to-indigo-50 rounded-lg p-6 border-2 border-purple-300 hover:shadow-xl transition-all cursor-pointer mt-4 mb-4"
+                         onClick={() => {
+                           console.log('🎯 법인회생 네이티브 광고 클릭:', index);
+                           window.open('/ad-landing/corporate-recovery', '_blank');
+                         }}>
                       <div className="flex items-start justify-between">
                         <div className="flex-1">
                           <div className="flex items-center mb-2">
-                            <span className="bg-yellow-100 text-yellow-800 text-xs px-2 py-1 rounded-full mr-2">
-                              [광고]
+                            <span className="bg-purple-400 text-purple-900 text-xs px-3 py-1 rounded-full mr-2 font-bold">
+                              🎯 법인회생 광고 #{Math.floor(index / 5) + 1} (게시글 {index + 1}번째 후)
                             </span>
                             <span className="text-xs text-gray-500">
                               Sponsored
                             </span>
                           </div>
-                          <h3 className="font-bold text-lg mb-2 text-gray-900">
-                            {selectedAd.title}
+                          <h3 className="font-bold text-xl mb-2 text-gray-900">
+                            🏢 법인회생 전문 법무법인 상담
                           </h3>
-                          <p className="text-gray-700 mb-3">
-                            {selectedAd.description}
+                          <p className="text-gray-700 mb-3 leading-relaxed">
+                            기업회생 전문 변호사가 무료로 상담해드립니다. 성공률 90% 이상 검증된 전문가!
                           </p>
                           <div className="flex items-center justify-between">
-                            <button className="bg-gradient-to-r from-purple-500 to-purple-600 text-white px-4 py-2 rounded-lg hover:from-purple-600 hover:to-purple-700 transition-all flex items-center text-sm font-medium">
-                              {selectedAd.cta}
+                            <button className="bg-gradient-to-r from-purple-500 to-indigo-500 text-white px-6 py-2 rounded-full hover:from-purple-600 hover:to-indigo-600 transition-all flex items-center text-sm font-semibold shadow-lg hover:shadow-xl transform hover:scale-105">
+                              무료 상담 신청
                               <ExternalLink className="w-4 h-4 ml-2" />
                             </button>
                             <div className="text-xs text-gray-400">
-                              클릭: {selectedAd.clicks} | 노출: {selectedAd.impressions}
+                              법인회생 전문 변호사
                             </div>
                           </div>
                         </div>
                       </div>
                     </div>
                   )}
+
+                  {/* 디버깅용 로그 */}
+                  {console.log(`🔍 법인회생 게시글 렌더링: ${post.id} (${post.title}), 인덱스: ${index}, 광고표시: ${(index + 1) % 5 === 0 ? 'YES' : 'NO'}`)}
+
+
                 </div>
               ))}
             </div>

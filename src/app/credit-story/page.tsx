@@ -56,6 +56,7 @@ export default function CreditStoryPage() {
   const [randomSidebarAds, setRandomSidebarAds] = useState<SidebarAd[]>([])
   const [currentPage, setCurrentPage] = useState(1)
   const [sortBy, setSortBy] = useState('latest') // 정렬 기준: latest, views, likes, comments
+  const [nativeAds, setNativeAds] = useState<any[]>([]) // Supabase 네이티브 광고
   
   const postsPerPage = 8 // 페이지당 8개 게시글
 
@@ -112,6 +113,31 @@ export default function CreditStoryPage() {
       impressions: 0
     }
   ]
+
+  // Supabase에서 네이티브 광고 불러오기
+  const fetchNativeAds = async () => {
+    try {
+      console.log('🚀 네이티브 광고 로드 시작...')
+      const apiUrl = '/api/ads?category=creditStory&adType=native&isActive=true'
+      console.log('📞 API 호출 URL:', apiUrl)
+      
+      const response = await fetch(apiUrl)
+      console.log('📡 API 응답 상태:', response.status)
+      
+      const data = await response.json()
+      console.log('📦 API 응답 데이터:', data)
+      
+      if (response.ok && data.ads) {
+        console.log('🎯 네이티브 광고 로드 성공:', data.ads.length, '개')
+        setNativeAds(data.ads)
+      } else {
+        console.error('❌ 네이티브 광고 로드 실패:', data.error)
+        console.error('❌ 응답 전체:', data)
+      }
+    } catch (error) {
+      console.error('❌ 네이티브 광고 API 오류:', error)
+    }
+  }
 
   // 게시글 데이터 로드 (로컬 스토리지 + 샘플 데이터)
   useEffect(() => {
@@ -289,6 +315,9 @@ export default function CreditStoryPage() {
     )
     
     setPosts(sortedPosts)
+    
+    // 네이티브 광고 로드
+    fetchNativeAds()
   }, [])
 
   // 말머리에 맞는 광고 선택
@@ -544,39 +573,61 @@ export default function CreditStoryPage() {
                     </div>
                   </Link>
 
-                  {/* 5번째 게시글 후에 네이티브 광고 표시 */}
-                  {(index + 1) === 5 && selectedAd && (
-                    <div className="bg-gradient-to-r from-yellow-50 to-orange-50 rounded-lg p-6 border-2 border-dashed border-yellow-200 hover:shadow-lg transition-all cursor-pointer mt-4"
-                         onClick={() => handleAdClick(selectedAd)}>
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <div className="flex items-center mb-2">
-                            <span className="bg-yellow-100 text-yellow-800 text-xs px-2 py-1 rounded-full mr-2">
-                              [광고]
-                            </span>
-                            <span className="text-xs text-gray-500">
-                              Sponsored
-                            </span>
-                          </div>
-                          <h3 className="font-bold text-lg mb-2 text-gray-900">
-                            {selectedAd.title}
-                          </h3>
-                          <p className="text-gray-700 mb-3">
-                            {selectedAd.description}
-                          </p>
-                          <div className="flex items-center justify-between">
-                            <button className="bg-gradient-to-r from-blue-500 to-blue-600 text-white px-4 py-2 rounded-lg hover:from-blue-600 hover:to-blue-700 transition-all flex items-center text-sm font-medium">
-                              {selectedAd.cta}
-                              <ExternalLink className="w-4 h-4 ml-2" />
-                            </button>
-                            <div className="text-xs text-gray-400">
-                              클릭: {selectedAd.clicks} | 노출: {selectedAd.impressions}
+                  {/* 네이티브 광고 - 5개 게시글마다 1개씩 표시 */}
+                  {(index + 1) % 5 === 0 && nativeAds.length > 0 && (
+                    (() => {
+                      const adIndex = Math.floor(index / 5) % nativeAds.length;
+                      const ad = nativeAds[adIndex];
+                      const bgColor = ad.native_config?.backgroundColor || '#fff3cd';
+                      const showEvery = ad.native_config?.showEvery || 5;
+                      
+                      return (
+                        <div 
+                          className="rounded-lg p-6 border-2 hover:shadow-xl transition-all cursor-pointer mt-4 mb-4"
+                          style={{ 
+                            backgroundColor: bgColor,
+                            borderColor: bgColor.replace('50', '300')
+                          }}
+                          onClick={() => {
+                            console.log('🎯 네이티브 광고 클릭:', ad.title);
+                            window.open(ad.link, '_blank');
+                          }}>
+                          <div className="flex items-start justify-between">
+                            <div className="flex-1">
+                              <div className="flex items-center mb-2">
+                                <span className="bg-yellow-400 text-yellow-900 text-xs px-3 py-1 rounded-full mr-2 font-bold">
+                                  [광고] {ad.native_config?.ctaText || 'Sponsored'}
+                                </span>
+                                <span className="text-xs text-gray-500">
+                                  {showEvery}개마다 표시
+                                </span>
+                              </div>
+                              <h3 className="font-bold text-xl mb-2 text-gray-900">
+                                {ad.title}
+                              </h3>
+                              <p className="text-gray-700 mb-3 leading-relaxed">
+                                {ad.description}
+                              </p>
+                              <div className="flex items-center justify-between">
+                                <button className="bg-gradient-to-r from-blue-500 to-purple-500 text-white px-6 py-2 rounded-full hover:from-blue-600 hover:to-purple-600 transition-all flex items-center text-sm font-semibold shadow-lg hover:shadow-xl transform hover:scale-105">
+                                  {ad.native_config?.ctaText || '자세히 보기'}
+                                  <ExternalLink className="w-4 h-4 ml-2" />
+                                </button>
+                                <div className="text-xs text-gray-400">
+                                  광고 ID: {ad.id}
+                                </div>
+                              </div>
                             </div>
                           </div>
                         </div>
-                      </div>
-                    </div>
+                      );
+                    })()
                   )}
+
+                  {/* 디버깅용 로그 */}
+                  {console.log(`🔍 게시글 렌더링: ${post.id} (${post.title}), 인덱스: ${index}, 광고표시: ${(index + 1) % 5 === 0 ? 'YES' : 'NO'}`)}
+
+
                 </div>
               ))}
             </div>
