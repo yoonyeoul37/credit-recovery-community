@@ -83,6 +83,19 @@ export async function GET(request: NextRequest) {
       nativeConfig: ad.native_config
     })) || []
 
+    // 네이티브 광고 디버깅 로그
+    const nativeAds = adsData.filter(ad => ad.adType === 'native')
+    if (nativeAds.length > 0) {
+      console.log('🎯 네이티브 광고 조회 결과:', nativeAds.map(ad => ({
+        id: ad.id,
+        title: ad.title,
+        imageUrl: ad.imageUrl ? `${ad.imageUrl.substring(0, 50)}...` : 'NO_IMAGE',
+        imageUrlType: ad.imageUrl?.startsWith('data:image/') ? 'Base64' : 'URL',
+        category: ad.category,
+        nativeConfig: ad.nativeConfig
+      })))
+    }
+
     return NextResponse.json({ ads: adsData })
   } catch (error) {
     console.error('광고 API 오류:', error)
@@ -110,59 +123,28 @@ export async function POST(request: NextRequest) {
       nativeConfig
     } = body
 
-    console.log('📝 광고 등록 요청 수신:', {
-      title,
-      description,
-      imageUrlLength: imageUrl?.length || 0,
-      imageUrlType: typeof imageUrl,
-      link,
-      category,
-      adType,
-      position,
-      size,
-      expiresAt,
-      nativeConfig
-    })
-
-    // 필수 필드 검증
-    if (!title || !description || !link || !category) {
-      console.error('❌ 필수 필드 누락:', { title, description, link, category })
-      return NextResponse.json(
-        { error: '필수 필드가 누락되었습니다.' },
-        { status: 400 }
-      )
-    }
-
     // 이미지 URL 검증 (Base64 또는 일반 URL)
-    if (imageUrl) {
-      if (imageUrl.startsWith('data:image/')) {
-        // Base64 이미지 크기 검증 (약 5MB)
-        const sizeInBytes = (imageUrl.length * 3) / 4
-        if (sizeInBytes > 5 * 1024 * 1024) {
-          console.error('❌ 이미지 크기 초과:', { sizeInBytes, maxSize: 5 * 1024 * 1024 })
-          return NextResponse.json(
-            { error: '이미지 크기는 5MB 이하여야 합니다.' },
-            { status: 400 }
-          )
-        }
-        console.log('✅ Base64 이미지 검증 통과:', { sizeInBytes })
-      } else {
-        console.log('✅ 일반 URL 이미지:', { imageUrl })
+    if (imageUrl && imageUrl.startsWith('data:image/')) {
+      // Base64 이미지 크기 검증 (약 3MB)
+      const sizeInBytes = (imageUrl.length * 3) / 4
+      if (sizeInBytes > 3 * 1024 * 1024) {
+        return NextResponse.json(
+          { error: '이미지 크기는 3MB 이하여야 합니다.' },
+          { status: 400 }
+        )
       }
     }
 
-    console.log('💾 데이터베이스 삽입 시도...')
-
-    // 데이터베이스에 삽입
+    // 데이터베이스에 삽입 - 기본값 설정
     const { data, error } = await supabase
       .from('ads')
       .insert([
         {
-          title,
-          description,
+          title: title || '제목 없음',
+          description: description || '설명 없음',
           image_url: imageUrl || '',
-          link,
-          category,
+          link: link || 'https://example.com',
+          category: category || 'creditStory',
           ad_type: adType || 'native',
           position: position || 'native',
           size: size || 'medium',
@@ -171,7 +153,7 @@ export async function POST(request: NextRequest) {
           impressions: 0,
           created_at: new Date().toISOString(),
           expires_at: expiresAt || null,
-          native_config: nativeConfig || null
+          native_config: nativeConfig || { showEvery: 5, ctaText: '자세히보기', backgroundColor: '#f0f9ff' }
         }
       ])
       .select()
@@ -184,7 +166,15 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    console.log('✅ 광고 등록 성공:', data[0])
+    console.log('✅ 광고 등록 성공:', {
+      id: data[0].id,
+      title: data[0].title,
+      imageUrlLength: data[0].image_url?.length || 0,
+      imageUrlType: data[0].image_url?.startsWith('data:image/') ? 'Base64' : 'URL',
+      category: data[0].category,
+      ad_type: data[0].ad_type,
+      native_config: data[0].native_config
+    })
     return NextResponse.json({
       message: '광고가 성공적으로 등록되었습니다.',
       ad: data[0]
@@ -266,8 +256,8 @@ export async function PUT(request: NextRequest) {
 // 광고 삭제 (DELETE)
 export async function DELETE(request: NextRequest) {
   try {
-    const { searchParams } = new URL(request.url)
-    const id = searchParams.get('id')
+    const body = await request.json()
+    const { id } = body
 
     if (!id) {
       return NextResponse.json(
@@ -275,6 +265,8 @@ export async function DELETE(request: NextRequest) {
         { status: 400 }
       )
     }
+
+    console.log('🗑️ 광고 삭제 요청:', { id })
 
     const { error } = await supabase
       .from('ads')
@@ -289,6 +281,7 @@ export async function DELETE(request: NextRequest) {
       )
     }
 
+    console.log('✅ 광고 삭제 성공:', { id })
     return NextResponse.json({
       message: '광고가 성공적으로 삭제되었습니다.'
     })
