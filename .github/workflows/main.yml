@@ -1,0 +1,21 @@
+name: Deploy to Cafe24
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy to server
+        uses: appleboy/ssh-action@v0.1.5
+        with:
+          host: 114.207.245.167
+          username: root
+          password: ${{ secrets.SERVER_PASSWORD }}
+          script: |
+            cd /root/credit-recovery-community
+            git pull origin main
+            npm install
+            npm run build
+            pm2 restart credit-app || pm2 start npm --name "credit-app" -- start
